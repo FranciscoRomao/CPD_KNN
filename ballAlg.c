@@ -9,7 +9,18 @@ typedef struct
     int rid;
     int radius;
     double *center;
-}node;
+} node;
+
+typedef struct
+{
+    int id;
+    double *coord
+};
+
+typedef struct
+{
+    double **coord;
+};
 
 void flag(int n)
 {
@@ -32,23 +43,22 @@ void dump_tree(node *root)
     printf("Tree pro lixo\n");
 }
 
-
 int main(int argc, char *argv[])
 {
     double exec_time;
     double **pts;
     node root;
-    
+
     exec_time = -omp_get_wtime();
-    
+
     pts = get_points(argc, argv);
-    
+
     root = build_tree();
 
     exec_time += omp_get_wtime();
-    
+
     //fprintf(stderr, "%.1lf\n", exec_time);
     printf("%.1lf\n", exec_time);
-    
+
     dump_tree(&root);
 }

@@ -1,1 +1,12 @@
 .vscode
+
+# Output files
+ballAlg
+
+# Object files
+*.o
+
+# Executable Files
+*.exe
+
+#

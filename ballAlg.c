@@ -11,17 +11,6 @@ typedef struct
     double *center;
 } node;
 
-typedef struct
-{
-    int id;
-    double *coord
-};
-
-typedef struct
-{
-    double **coord;
-};
-
 void flag(int n)
 {
     printf("Flag %d\n", n);

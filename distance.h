@@ -3,7 +3,7 @@
 
 #include "point.h"
 
-double distance(point x1, point x2);//compute the distance between two points
-point* furthest_apart(point* points);//comput the points that are furthest apart from each other
+double distance(int dimensions, double* x_coords, double* y_coords);//compute the distance between two points
+point* furthest_apart(int numb_points,int dimensions, point* pts, int initial_index, int start_index);//comput the points that are furthest apart from each other
 
 #endif

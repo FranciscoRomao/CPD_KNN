@@ -4,7 +4,7 @@
 typedef struct
 {
     int id;
-    double *coord
+    double *coord;
 }point;
 
 typedef struct

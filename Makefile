@@ -4,15 +4,18 @@ TARGET = ballAlg
 
 OBJS = 
 
-FLAGS = -O3 -fopenmp
-debugFLAGS = -fopenmp
+FLAGS = -O3 -fopenmp -lm
+debugFLAGS = -fopenmp -lm
 
 all: ballAlg
 
-$(TARGET): gen_points.o
-	gcc $(MAIN) $(debugFLAGS) $^ -o $@
+$(TARGET): gen_points.o distance.o
+	gcc $(MAIN)  $^ -o $@ $(debugFLAGS)
 
 gen_points.o: gen_points.c
+	gcc $^ -c $(debugFLAGS)
+
+distance.o:distance.c
 	gcc $^ -c $(debugFLAGS)
 
 # $^ - representa as dependencias do comando

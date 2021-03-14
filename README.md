@@ -5,11 +5,11 @@
 ### p1
 - [ ] Distance Algorithm 
 - [ ] Compute points furthest apart
-- [ ] Create vector with distances from all points to the left limit of the line
 ---
 ### p2
 - [ ] Orthogonal Projection (in: line(represented by 2 points), one point; out: projected point on the line)
-- [ ] Project all points in a line and store it in a struct
+- [ ] Project all points in a line and store it 
+- [ ] - [ ] Create vector with distances from all points to the left limit of the line
 ### p3
 - [ ] Find circle center (median) (possibly the intermediate point)
 ---

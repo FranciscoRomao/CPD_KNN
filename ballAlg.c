@@ -1,15 +1,7 @@
 #include <omp.h>
 #include <stdio.h>
 #include "gen_points.h"
-
-typedef struct
-{
-    int id;
-    int lid;
-    int rid;
-    int radius;
-    double *center;
-} node;
+#include "distance.h"
 
 void flag(int n)
 {
@@ -17,11 +9,18 @@ void flag(int n)
     fflush(stdout);
 }
 
-node build_tree()
+node build_tree(double **pts, int npoints, int dimensions)
 {
+    printf("Building Tree...\n");
+
     node root;
 
-    printf("Building Tree...\n");
+    double **limits;
+
+    limits = furthest_apart(npoints, dimensions, pts, 0, npoints-1);
+
+    //.......
+    
     printf("Done\n");
 
     return root;

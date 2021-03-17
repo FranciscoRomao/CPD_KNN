@@ -15,11 +15,11 @@ node build_tree(double **pts, int npoints, int dimensions)
 
     node root;
 
-    double **limits;
+    double **limits; //pontos a e b
 
     limits = furthest_apart(npoints, dimensions, pts, 0, npoints-1);
 
-    //.......
+    
     
     printf("Done\n");
 

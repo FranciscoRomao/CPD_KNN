@@ -5,10 +5,11 @@
 ### p1
 - [ ] Distance Algorithm 
 - [ ] Compute points furthest apart
+Recursion?
 ---
 ### p2
-- [ ] Orthogonal Projection (in: line(represented by 2 points), one point; out: projected point on the line)
-- [ ] Project all points in a line and store it 
+- [*] Orthogonal Projection (in: line(represented by 2 points), one point; out: projected point on the line)
+- [*] Project all points in a line and store it 
 ### p3
 - [ ] Create vector with distances from all projections of the points to the left limit of the line
 - [ ] Find circle center (median) (possibly the intermediate point)

@@ -16,10 +16,11 @@ node build_tree(double **pts, int npoints, int dimensions)
     node root;
 
     double **limits; //pontos a e b
+    double **projections; //projections from all points on the line ab (including a and b)
 
     limits = furthest_apart(npoints, dimensions, pts, 0, npoints-1);
 
-    
+    projections = project_on_ab(limits, pts);    
     
     printf("Done\n");
 

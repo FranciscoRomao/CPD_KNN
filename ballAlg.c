@@ -1,7 +1,7 @@
 #include <omp.h>
 #include <stdio.h>
 #include "gen_points.h"
-#include "distance.h"
+#include "geometry.h"
 
 void flag(int n)
 {
@@ -9,7 +9,7 @@ void flag(int n)
     fflush(stdout);
 }
 
-node build_tree(double **pts, int npoints, int dimensions)
+node build_tree(double **pts, int npoints, int ndims)
 {
     printf("Building Tree...\n");
 
@@ -17,11 +17,16 @@ node build_tree(double **pts, int npoints, int dimensions)
 
     double **limits; //pontos a e b
     double **projections; //projections from all points on the line ab (including a and b)
+    double radius;
 
-    limits = furthest_apart(npoints, dimensions, pts, 0, npoints-1);
+    limits = furthest_apart(npoints, ndims, pts, 0, npoints-1);
 
-    projections = project_on_ab(limits, pts);    
+    projections = project_on_ab(limits, pts, npoints, ndims);
+
+    radius = calc_Radius(projections, npoints, ndims);
     
+    //....
+
     printf("Done\n");
 
     return root;

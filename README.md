@@ -3,7 +3,7 @@
 ## Task list
 
 ### p1
-- [ ] Distance Algorithm 
+- [*] Distance Algorithm 
 - [ ] Compute points furthest apart
 Recursion?
 ---

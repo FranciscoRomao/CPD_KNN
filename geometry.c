@@ -2,23 +2,9 @@
 #include <stdlib.h>
 #include "geometry.h"
 
-typedef struct
-{
-    int id;
-    double *coord;
-} point;
-
-typedef struct
-{
-    int id;
-    int lid;
-    int rid;
-    int radius;
-    double *center;
-} node;
-
 int cmpfunc(double *a, double *b) return (a - b);
 
+/*
 double calc_Radius(double **projections, int npoints)
 {
     double ans = 0;
@@ -40,6 +26,36 @@ double calc_Radius(double **projections, int npoints)
         ans = (distances[npoints / 2 - 1] + distances[npoints / 2]) / 2;
         return ans
     }
+}*/
+
+double *getCenter(projections, npts, ndims)
+{
+    qsort(distances[0], npoints, sizeof(double), cmpfunc);
+
+    if (npoints % 2 != 0)
+    {
+        ans = distances[(npoints - 1) / 2];
+        return ans;
+    }
+    else
+    {
+        ans = (distances[npoints / 2 - 1] + distances[npoints / 2]) / 2;
+        return ans
+    }
+}
+
+
+double *calc_distances_to_left_limit(double *left_limmit, double **projections, long npts, int ndims)
+{
+    double *dists = malloc(sizeof(double) * npts);
+
+    for(long i=0; i<npts; i++)
+    {
+        dists[i] = distance(ndims, left_limmit, projections[i]);
+    }
+
+    return dists;
+
 }
 
 double distance(int n_dims, double *a, double *b)

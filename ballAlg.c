@@ -15,15 +15,24 @@ node build_tree(double **pts, int npoints, int ndims)
 
     node root;
 
-    double **limits; //pontos a e b
+    int *limits; //pontos a e b
     double **projections; //projections from all points on the line ab (including a and b)
     double radius;
+    double center
+    double *distances2a;
 
     limits = furthest_apart(npoints, ndims, pts, 0, npoints-1);
 
     projections = project_on_ab(limits, pts, npoints, ndims);
 
-    radius = calc_Radius(projections, npoints, ndims);
+    distances2a = calc_distances_to_left_limit(limits[0], projections, npoints, ndims);
+
+    center = getCenter(projections);
+
+
+
+
+    radius = calc_Radius(projections, npoints, ndims, center);
     
     //....
 

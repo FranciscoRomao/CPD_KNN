@@ -2,60 +2,47 @@
 #include <stdlib.h>
 #include "geometry.h"
 
-int cmpfunc(double *a, double *b) return (a - b);
-
-/*
-double calc_Radius(double **projections, int npoints)
+int cmpfunc(double *a, double *b)
 {
-    double ans = 0;
-    double *distances2a;
+    return (a - b);
+}
 
-    distances2a = calc_distances_to_left_limit(projections);
-
-    aux_pt = furthest_point(dimensions, npoints, pts, median);
-
-    void qsort(distances[0], npoints, sizeof(double), cmpfunc);
-
-    if (npoints % 2 != 0)
-    {
-        ans = distances[(npoints - 1) / 2];
-        return ans;
-    }
-    else
-    {
-        ans = (distances[npoints / 2 - 1] + distances[npoints / 2]) / 2;
-        return ans
-    }
-}*/
-
-double *getCenter(projections, npts, ndims)
+double *getCenter(distances, projections, npts, ndims)
 {
+    long idx;
+    **ns = malloc(sizeof(double) * nd ims);
+
     qsort(distances[0], npoints, sizeof(double), cmpfunc);
 
     if (npoints % 2 != 0)
     {
-        ans = distances[(npoints - 1) / 2];
+        idx = (npoints - 1) / 2;
+        ans = projections[idx];
         return ans;
     }
     else
     {
-        ans = (distances[npoints / 2 - 1] + distances[npoints / 2]) / 2;
-        return ans
+        idx = (npoints - 2) / 2;
+
+        for (int i = 0; i < ndims; i++)
+        {
+            ans[i] = (projections[idx][i] + projections[idx + 1][i]) / 2;
+        }
+
+        return ans;
     }
 }
-
 
 double *calc_distances_to_left_limit(double *left_limmit, double **projections, long npts, int ndims)
 {
     double *dists = malloc(sizeof(double) * npts);
 
-    for(long i=0; i<npts; i++)
+    for (long i = 0; i < npts; i++)
     {
         dists[i] = distance(ndims, left_limmit, projections[i]);
     }
 
     return dists;
-
 }
 
 double distance(int n_dims, double *a, double *b)
@@ -158,7 +145,7 @@ long *furthest_apart(int n_dims, long np, double **pts)
 
 double *subtraction(int n_dims, double *a, double *b)
 {
-    double result[n_dims] = {};
+    double *result = (double *)malloc(n_dims * sizeof(double));
     for (int i = 0; i < n_dims; i++)
     {
         result[i] = b[i] - a[i];
@@ -168,7 +155,7 @@ double *subtraction(int n_dims, double *a, double *b)
 
 double *sum(int n_dims, double *a, double *b)
 {
-    double result[n_dims] = {};
+    double *result = (double *)malloc(n_dims * sizeof(double));
     for (int i = 0; i < n_dims; i++)
     {
         result[i] = a[i] + b[i];
@@ -188,7 +175,7 @@ double inner_product(int n_dims, double *a, double *b)
 
 double *multiply(int n_dims, double *a, int constant)
 {
-    double result[n_dims] = {};
+    double *result = (double *)malloc(n_dims * sizeof(double));
     for (int i = 0; i < n_dims; i++)
     {
         result[i] = constant * a[i];
@@ -198,22 +185,33 @@ double *multiply(int n_dims, double *a, int constant)
 
 double *orthogonal_projection(int n_dims, double *p, double *a, double *b)
 {
-    double result[n_dims] = {}, numerator[n_dims] = {}, denominator[n_dims] = {}, b_minus_a[n_dims] = {};
+    double numerator = 0, denominator = 0, result_div = 0;
+    double *result = (double *)malloc(n_dims * sizeof(double));
+    double *b_minus_a = (double *)malloc(n_dims * sizeof(double));
 
     b_minus_a = subtraction(n_dims, a, b);
     numerator = inner_product(n_dims, subtraction(n_dims, a, p), b_minus_a);
     denominator = inner_product(n_dims, b_minus_a, b_minus_a);
-    result = numerator / denominator;
+    result_div = numerator / denominator;
     result = multiply(n_dims, b_minus_a, result);
     result = sum(n_dims, result, a);
     return result;
 }
 
-double **project_pts2line(int n_dims, double *a, double *b, double **pts, long *idx2project, long np2project)
+double **project_pts2line(int n_dims, /*[numero de pontos]*/
+                          double *a,
+                          double *b,
+                          double **pts,
+                          long *idx2project,
+                          long np2project)
 {
-    double **furthest_pts = (double *)malloc(n_dims * np2project * sizeof(double));
+    double **projected_points = (double *)malloc(n_dims * np2project * sizeof(double));
     for (int i = 0; i < np2project; i++)
     {
-        projected_points[i] = orthogonal_projection(n_dims, pts[idx2project[i]], a, b);
+        if (idx2project[0] == -1)
+            projected_points[i] = orthogonal_projection(n_dims, pts[i], a, b);
+        else
+            projected_points[i] = orthogonal_projection(n_dims, pts[idx2project[i]], a, b);
     }
+    return projected_points;
 }

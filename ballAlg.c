@@ -15,7 +15,7 @@ build_tree(
     root->median = ....root->dasd..alocas(root->left) metes count++ alocas(root->right) metes count++ build_tree(root->left, )
                        build_tree(roof->right, ) return )
 
-    void build_tree(node *newNode, double **pts, int npoints, int n_dims, long start, long end)
+void build_tree(node *newNode, double **pts, int npoints, int n_dims, long start, long end)
 {
 
     int *limits;          //pontos a e b
@@ -25,8 +25,8 @@ build_tree(
     long idx2project[1] = -1; //repensar
     double *distances2a;
     int aux_int;
-    double aux_dbl1;
-    double aux_dbl2;
+    double aux1;
+    double aux2;
     node lnode;
     node rnode;
 
@@ -40,58 +40,59 @@ build_tree(
 
     center_idx = getMedian(projections, npoints, n_dims, newNode->center);
 
-    aux_dbl1 = distance(n_dims, newNode->center, distances2a[0]);
-    aux_dbl2 = distance(n_dims, newNode->center, distances2a[npoints - 1]);
+    newNode->radius = 0;
 
-    if (aux_dbl1 > aux_dbl2)
+    aux = furthest_point(n_dims, np, pts, newNode->center); //Talvez temos de criar uma nova função que
+                                                                             //recebe as coordenadas de um ponto em vez de indice
+
+    free(distances2a);
+
+    for(int i=0; i<npoints; i++)
     {
-        radius = aux_dbl1;
+        free(projections[i]);
+    }    
+    free(projections);
+
+
+    if (aux1 > aux2)
+    {
+        radius = aux1;
     }
     else
     {
-        radius = aux_dbl2;
+        radius = aux2;
     }
 
-    if (center_idx == 0) //Se já não existir pontos à esquerda
+    if(center_idx == 0) //Se já não existir pontos à esquerda
     {
-        newNode->id = -1;
+        newNode->lid = -1;
         newNode->lnode = NULL;
-        newNode->rnode = NULL;
-        newNode->radius = 0;
-        newNode->center =
-
-            return;
     }
     else //Se ainda houver pontos à esquerda
     {
         node lnode;
         lnode->id = (newNode->id) * 2 + 1;
-        build_tree(lnode, pts, /*npoints*/, n_dims)
+        build_tree(lnode, pts, center_idx, n_dims);//center_idx happens to be the number of points in the set
     }
 
-    if (npoints - center_idx == 1) //Significa que já não existe pontos à direita
+    if(npoints - center_idx == 1) //Significa que já não existe pontos à direita
     {
         newNode->rid = -1;
-        //...
+        newNode->rnode = NULL;
     }
-    else //Ainda exis
+    else
     {
         node rnode;
-        build_tree(node * newNode, double **pts, int npoints, int n_dims, int last_id)
+        rnode->id = (newNode->id) * 2 + 2;
+        build_tree(rnode, pts+center_idx, npoints-center_idx, n_dims);
     }
 
-    if ()
-
-        build_tree()
-
-            printf("Done\n");
-
-    return root;
+    return;
 }
 
 void dump_tree(node *root)
 {
-    printf("Tree pro lixo\n");
+
 }
 
 int main(int argc, char *argv[])

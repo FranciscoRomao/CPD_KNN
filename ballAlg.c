@@ -9,9 +9,11 @@ void flag(int n)
     fflush(stdout);
 }
 
-long build_tree(node *newNode, double **pts, int npoints, int ndims)
+node build_tree(node *newNode, double **pts, int npoints, int n_dims, int last_id)
 {
     printf("Building Tree...\n");
+
+    newNode = (*node)malloc(sizeof(node));
 
     int *limits;          //pontos a e b
     double **projections; //projections from all points on the line ab (including a and b)
@@ -19,27 +21,44 @@ long build_tree(node *newNode, double **pts, int npoints, int ndims)
     double *center;
     long idx2project[1] = -1; //repensar
     double *distances2a;
+    int aux_int;
+    double aux_dbl1;
+    double aux_dbl2;
+    node *lnode;
+    node *rnode;
 
-    limits = furthest_apart(npoints, ndims, pts, 0, npoints - 1);
+    limits = furthest_apart(npoints, n_dims, pts, 0, npoints - 1);
 
-    projections = project_pts2line(ndims, limits[0], limits[1], pts, idx2project, npoints);
+    projections = project_pts2line(n_dims, limits[0], limits[1], pts, idx2project, npoints);
 
-    distances2a = calc_distances_to_left_limit(limits[0], projections, npoints, ndims);
+    distances2a = calc_distances_to_left_limit(limits[0], projections, npoints, n_dims);
 
-    center = getCenter(distances2a, projections, npoints, ndims);
+    quick_sort(pts, projections, distances2a);
 
-    newNode->center = center;
+    center_idx = getMedian(projections, npoints, n_dims, newNode->center);
 
-    
-    radius = distance(ndims, center, limits[0]);
+    aux_dbl1 = distance(n_dims, newNode->center, distances2a[0]);
+    aux_dbl2 = distance(n_dims, newNode->center, distances2a[npoints - 1]);
 
-    newNode->center = center;
+    if (aux_dbl1 > aux_dbl2)
+    {
+        radius = aux_dbl1;
+    }
+    else
+    {
+        radius = aux_dbl2;
+    }
 
-    set_splitter(radius, distances2a);
+    if (center_idx == 1)
+    {
+        newNode->lnode
+    }
 
-    //....
+    if ()
 
-    printf("Done\n");
+        build_tree()
+
+            printf("Done\n");
 
     return root;
 }
@@ -53,16 +72,14 @@ int main(int argc, char *argv[])
 {
     double exec_time;
     double **pts;
-    node root;
+    node *root;
     long last_id;
 
     exec_time = -omp_get_wtime();
 
     pts = get_points(argc, argv);
 
-    root.id = 0;
-
-    last_id = build_tree(&root, double **pts, int npoints, int ndims);
+    root = build_tree(&root, double **pts, int npoints, int ndims, -1);
 
     exec_time += omp_get_wtime();
 

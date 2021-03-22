@@ -9,7 +9,7 @@ void flag(int n)
     fflush(stdout);
 }
 
-node build_tree(node *newNode, double **pts, int npoints, int ndims)
+long build_tree(node *newNode, double **pts, int npoints, int ndims)
 {
     printf("Building Tree...\n");
 
@@ -26,10 +26,11 @@ node build_tree(node *newNode, double **pts, int npoints, int ndims)
 
     distances2a = calc_distances_to_left_limit(limits[0], projections, npoints, ndims);
 
-    center = getCenter(projections);
+    center = getCenter(distances2a, projections, npoints, ndims);
 
     newNode->center = center;
 
+    
     radius = distance(ndims, center, limits[0]);
 
     newNode->center = center;
@@ -53,12 +54,15 @@ int main(int argc, char *argv[])
     double exec_time;
     double **pts;
     node root;
+    long last_id;
 
     exec_time = -omp_get_wtime();
 
     pts = get_points(argc, argv);
 
-    root = build_tree(&root, double **pts, int npoints, int ndims);
+    root.id = 0;
+
+    last_id = build_tree(&root, double **pts, int npoints, int ndims);
 
     exec_time += omp_get_wtime();
 

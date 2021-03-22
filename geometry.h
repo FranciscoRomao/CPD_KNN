@@ -3,9 +3,10 @@
 
 typedef struct
 {
-    int id;
-    int lid;
-    int rid;
+    long id;
+    long idx; //será que é necessário??
+    node *lnode;
+    node *rnode;
     int radius;
     double *center;
 } node;

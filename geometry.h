@@ -4,7 +4,6 @@
 typedef struct
 {
     long id;
-    long idx; //será que é necessário??
     node *lnode;
     node *rnode;
     int radius;

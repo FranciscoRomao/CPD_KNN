@@ -61,20 +61,20 @@ void quick_sort(double **pts, double **projections, double **distances2a, long l
     }
 }
 
-long getMedian(double **projections, long npts, int ndims, double *center)
+long getMedian(double **projections, long n_points, int n_dims, double *center)
 {
     long idx;
 
-    if (npts % 2 != 0) //odd number of points
+    if (n_points % 2 != 0) //odd number of points
     {
-        idx = (npts - 1) / 2;
+        idx = (n_points - 1) / 2;
         center = projections[idx];
     }
     else //even number of points
     {
-        idx = (npts - 2) / 2; //point to the left of median coordinates
+        idx = (n_points - 2) / 2; //point to the left of median coordinates
 
-        for (long i = 0; i < ndims; i++)
+        for (long i = 0; i < n_dims; i++)
         {
             center[i] = (projections[idx][i] + projections[idx + 1][i]) / 2;
         }
@@ -83,13 +83,13 @@ long getMedian(double **projections, long npts, int ndims, double *center)
     return idx;
 }
 
-double *calc_distances_to_left_limit(double *left_limmit, double **projections, long npts, int ndims)
+double *calc_distances_to_left_limit(double *left_limmit, double **projections, long n_points, int n_dims)
 {
     double *dists = malloc(sizeof(double) * npts);
 
-    for (long i = 0; i < npts; i++)
+    for (long i = 0; i < n_points; i++)
     {
-        dists[i] = distance(ndims, left_limmit, projections[i]);
+        dists[i] = distance(n_dims, left_limmit, projections[i]);
     }
 
     return dists;
@@ -106,14 +106,14 @@ double distance(int n_dims, double *a, double *b)
     return distance;
 }
 
-long furthest_point(int n_dims, long np, double **pts, long base_idx)
+long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords)
 {
     double max_dist = -1, curr_dist = 0;
     long idx_newpt = 0;
 
-    for (long i = 0; i < np; i++)
+    for (long i = 0; i < n_points; i++)
     {
-        if ((curr_dist = distance_(n_dims, pts[base_idx], pts[i])) > max_dist)
+        if ((curr_dist = distance_(n_dims, base_coords, pts[i])) > max_dist)
         {
             max_dist = curr_dist;
             idx_newpt = i;
@@ -122,17 +122,18 @@ long furthest_point(int n_dims, long np, double **pts, long base_idx)
     return idx_newpt;
 }
 
-long *recursive_furthest_apart(int n_dims, long np, double **pts, long *idx_fp)
+void recursive_furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp)
 {
     long idx_new_fp = 0;
-    idx_new_fp = furthest_point(n_dims, np, **pts, idx_fp[0]);
+
+    idx_new_fp = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
     if (idx_new_fp != idx_fp[1])
     {
         idx_fp[1] = idx_fp[0];
         idx_fp[0] = idx_new_fp;
-        idx_fp = recursive_furthest_apart(n_dims, long np, double **pts, idx_fp)
+        recursive_furthest_apart(n_dims, n_points, pts, idx_fp);
     }
-    return idx_fp;
+    return;
 }
 
 double *subtraction(int n_dims, double *a, double *b)
@@ -148,6 +149,7 @@ double *subtraction(int n_dims, double *a, double *b)
 double *sum(int n_dims, double *a, double *b)
 {
     double *result = (double *)malloc(n_dims * sizeof(double));
+
     for (int i = 0; i < n_dims; i++)
     {
         result[i] = a[i] + b[i];
@@ -165,9 +167,10 @@ double inner_product(int n_dims, double *a, double *b)
     return result;
 }
 
-double *multiply(int n_dims, double *a, int constant)
+double *multiply(int n_dims, double *a, double constant)
 {
     double *result = (double *)malloc(n_dims * sizeof(double));
+
     for (int i = 0; i < n_dims; i++)
     {
         result[i] = constant * a[i];
@@ -178,73 +181,31 @@ double *multiply(int n_dims, double *a, int constant)
 double *orthogonal_projection(int n_dims, double *p, double *a, double *b)
 {
     double numerator = 0, denominator = 0, result_div = 0;
-    double *result = (double *)malloc(n_dims * sizeof(double));
-    double *b_minus_a = (double *)malloc(n_dims * sizeof(double));
+    double result_div;
+    double *result_mult;
+    double *result_sum;
+    double *b_minus_a;
+    double *p_minus_a;
 
     b_minus_a = subtraction(n_dims, a, b);
-    numerator = inner_product(n_dims, subtraction(n_dims, a, p), b_minus_a);
+    p_minus_a = subtraction(n_dims, a, p);
+    numerator = inner_product(n_dims, p_minus_a, b_minus_a);
     denominator = inner_product(n_dims, b_minus_a, b_minus_a);
     result_div = numerator / denominator;
-    result = multiply(n_dims, b_minus_a, result);
-    result = sum(n_dims, result, a);
-    return result;
+    result_mult = multiply(n_dims, b_minus_a, result_div);
+    result_sum = sum(n_dims, result_mult, a);
+    free(b_minus_a);
+    free(p_minus_a);
+    free(result_mult);
+    return result_sum;
 }
 
-double **project_pts2line(int n_dims, /*[numero de pontos]*/
-                          double *a,
-                          double *b,
-                          double **pts,
-                          long *idx2project,
-                          long np2project)
+double **project_pts2line(int n_dims, double *a, double *b, double **pts, long n_points)
 {
-    double **projected_points = (double *)malloc(n_dims * np2project * sizeof(double));
-    for (int i = 0; i < np2project; i++)
+    double **projected_points = (double *)malloc(n_dims * n_points * sizeof(double));
+    for (int i = 0; i < n_points; i++)
     {
-        if (idx2project[0] == -1)
-            projected_points[i] = orthogonal_projection(n_dims, pts[i], a, b);
-        else
-            projected_points[i] = orthogonal_projection(n_dims, pts[idx2project[i]], a, b);
+        projected_points[i] = orthogonal_projection(n_dims, pts[i], a, b);
     }
     return projected_points;
 }
-
-
-
-/*
-long *recursive_furthest_apart(double **pts, int n_dims, long np, long base_index,
-                               double max_distance, long *furthest_pts)
-{
-    if (base_index == np - 2)
-    { //only one point remaining
-        return furthest_pts;
-    }
-    long furthest_pt = furthest_point(n_dims, np, pts, base_index);
-    long new_distance = 0;
-    if ((new_distance = distance(n_dims, pts[base_index], pts[furthest_pt])) > max_distance)
-    {
-        max_distance = new_distance;
-        furthest_pts[0] = base_index;
-        furthest_pts[1] = furthest_pt;
-    }
-    return recursive_furthest_apart(pts, n_dims, np, base_index + 1, max_distance, furthest_pts);
-}
-
-long *furthest_apart(int n_dims, long np, double **pts)
-{
-    long *furthest_pts = (long *)malloc(2 * sizeof(long));
-    double max_distance = -1;
-    double curr_distance = 0;
-    for (long i = 0; i < np; i++)
-    {
-        for (long j = i + 1; j < np; j++)
-        {
-            if ((curr_distance = distance(n_dims, pts[i], pts[j])) > max_distance)
-            {
-                furthest_pts[0] = i;
-                furthest_pts[1] = j;
-            }
-        }
-    }
-    return furthest_pts;
-}
-*/

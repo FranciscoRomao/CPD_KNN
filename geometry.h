@@ -10,16 +10,17 @@ typedef struct
     double *center;
 } node;
 
-double distance(int dimensions, double *x_coords, double *y_coords);                                  //compute the distance between two points
-int *furthest_apart(int numb_points, int dimensions, point *pts, int initial_index, int start_index); //comput the points that are furthest apart from each other
-double **project_on_ab(double **limits_ab, double **pts);
-double *subtraction(int n_dims, double *a, double *b);
+void swap(double **pts, double **projections, double **distances2a, long a, long b);
+long partition(double **pts, double **projections, double **distances2a, long low, long high);
+void quick_sort(double **pts, double **projections, double **distances2a, long low, long high);
+long getMedian(double **projections, long n_points, int n_dims, double *center);
+double *calc_distances_to_left_limit(double *left_limmit, double **projections, long n_points, int n_dims);
+double distance(int n_dims, double *a, double *b);
+long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords);
+void recursive_furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp) double *subtraction(int n_dims, double *a, double *b);
 double *sum(int n_dims, double *a, double *b);
-double *calc_distances2a(pts);
-double *multiply(int n_dims, double *a, int constant);
 double inner_product(int n_dims, double *a, double *b);
-long furthest_point(int n_dims, long np, double **pts, long base_idx);
+double *multiply(int n_dims, double *a, double constant);
 double *orthogonal_projection(int n_dims, double *p, double *a, double *b);
-double **project_pts2line(int n_dims, double *a, double *b, double **pts, long *idx2project, long np2project);
-
+double **project_pts2line(int n_dims, double *a, double *b, double **pts, long n_points);
 #endif

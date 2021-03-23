@@ -20,3 +20,7 @@ Recursion?
 ---
 ### p4
 - [ ] Write to the tree, implement the recursion
+
+### Pontos que podemos acelerar
+
+- [ ] Tentar reduzir o número de mallocs

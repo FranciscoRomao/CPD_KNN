@@ -9,13 +9,13 @@ debugFLAGS = -fopenmp -lm
 
 all: ballAlg
 
-$(TARGET): gen_points.o distance.o
+$(TARGET): gen_points.o geometry.o
 	gcc $(MAIN)  $^ -o $@ $(debugFLAGS)
 
 gen_points.o: gen_points.c
 	gcc $^ -c $(debugFLAGS)
 
-distance.o:distance.c
+geometry.o:geometry.c
 	gcc $^ -c $(debugFLAGS)
 
 # $^ - representa as dependencias do comando

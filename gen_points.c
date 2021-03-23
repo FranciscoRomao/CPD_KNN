@@ -24,7 +24,7 @@ double **create_array_pts(int n_dims, long np)
     return p_arr;
 }
 
-double **project_pts2line(int n_dims, double *a, double *b, double **pts, long *idx2project, long np2project) double **get_points(int argc, char *argv[])
+double **get_points(int argc, char *argv[])
 {
     double **pt_arr;
     unsigned seed;

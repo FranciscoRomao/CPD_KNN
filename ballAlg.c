@@ -67,23 +67,26 @@ int main(int argc, char *argv[])
 {
     double exec_time;
     double **pts;
-    node root;
+    node tree_root;
     long last_id;
-    /*
-    exec_time = -omp_get_wtime();
 
+    //exec_time = -omp_get_wtime();
     pts = get_points(argc, argv);
-
-    root.id = 0;
-    root.lnode = NULL;
-    root.rnode = NULL;
-    build_tree(&root, pts, n_points, n_dims, -1);
-
-    exec_time += omp_get_wtime();
-
-    //fprintf(stderr, "%.1lf\n", exec_time);
-    printf("%.1lf\n", exec_time);
-
-    dump_tree(&root);
-    */
+    int n_dims = atoi(argv[1]);
+    printf("DIMS:%d\n", n_dims);
+    long n_points = atoi(argv[2]);
+    printf("NPOINTS:%ld\n", n_points);
+    for (long i = 0; i < n_points; i++)
+    {
+        printf("POINT %ld\n", i);
+        for (int j = 0; j < n_dims; j++)
+        {
+            printf("%f ", pts[i][j]);
+        }
+        printf("\n");
+    }
+    build_tree(&tree_root, pts, n_points, n_dims);
+    //exec_time += omp_get_wtime();
+    //printf("%.1lf\n", exec_time);
+    //dump_tree(&root);
 }

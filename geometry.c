@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "geometry.h"
 
 // A utility function to swap two elements

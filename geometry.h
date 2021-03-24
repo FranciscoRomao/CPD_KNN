@@ -25,5 +25,12 @@ double *multiply(int n_dims, double *a, double constant);
 double *orthogonal_projection(int n_dims, double *p, double *a, double *b);
 double **project_pts2line(int n_dims, double *a, double *b, double **pts, long n_points);
 void dump_tree(node tree_root, int n_dims, long n_points);
+void get_first_coord(long n_points, double **pts, double *first_coord);
+
+
+
+
+
 void flag(int n); //Tirar no fim
+
 #endif

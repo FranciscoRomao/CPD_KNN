@@ -19,6 +19,8 @@ void build_tree(node *newNode, double **pts, long n_points, int n_dims)
     double radius;
     double *center;
     double *distances2a;
+    double *first_coord = (double *)malloc(n_points*sizeof(double));
+    
     long center_idx;
     long fapart_idx;
     long idx_fp[2] = {0, 0}; //pontos a e b
@@ -30,7 +32,7 @@ void build_tree(node *newNode, double **pts, long n_points, int n_dims)
         exit(1);
     }
 
-    lnode->id = 2 * newNode->id + 1;
+    lnode->id = newNode->id + 1;
     newNode->lnode = lnode;
 
     node *rnode = (node *)malloc(sizeof(node));
@@ -40,21 +42,26 @@ void build_tree(node *newNode, double **pts, long n_points, int n_dims)
         exit(1);
     }
 
-    rnode->id = 2 * newNode->id + 2;
-    newNode->rnode = rnode;
+    
     //Calculate furthest points and make projections on their line
     recursive_furthest_apart(n_dims, n_points, pts, idx_fp);
     projections = project_pts2line(n_dims, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
     //Sort points and calculate Median
-    distances2a = calc_distances_to_left_limit(pts[idx_fp[0]], projections, n_points, n_dims);
-    quick_sort(pts, projections, distances2a, 0, n_points - 1);
+    //distances2a = calc_distances_to_left_limit(pts[idx_fp[0]], projections, n_points, n_dims);
+
+    if(n_dims==1)
+        quick_sort(pts, projections, (double *)pts, 0, n_points - 1);
+    else
+        get_first_coord(n_points, pts, first_coord);
+        quick_sort(pts, projections, first_coord, 0, n_points - 1);
+
     newNode->center = (double *)malloc(n_dims * sizeof(double));
     center_idx = getMedian(projections, n_points, n_dims, newNode->center);
     //Calculate the radius
     fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, newNode->center);
     newNode->radius = distance(n_dims, pts[fapart_idx], newNode->center);
 
-    free(distances2a);
+    free(first_coord);
     for (int i = 0; i < n_points; i++)
     {
         free(projections[i]);
@@ -62,7 +69,10 @@ void build_tree(node *newNode, double **pts, long n_points, int n_dims)
     free(projections);
 
     build_tree(lnode, pts, center_idx, n_dims); //center_idx happens to be the number of points in the set
+    rnode->id = newNode->id + 2 *  center_idx;
+    newNode->rnode = rnode;
     build_tree(rnode, pts + center_idx, n_points - center_idx, n_dims);
+ 
 
     return;
 }
@@ -72,7 +82,7 @@ void print_Node(node foo, int n_dims)
     //node_id left_child_id right_child_id radius center_coordinates
     if (foo.lnode != NULL)
     {
-        printf("%ld %ld %ld %.6lf", foo.id, foo.rnode->id, foo.lnode->id, foo.radius);
+        printf("%ld %ld %ld %.6lf", foo.id, foo.lnode->id, foo.rnode->id, foo.radius);
 
         for (int i = 0; i < n_dims; i++)
             printf(" %.6lf", foo.center[i]);
@@ -110,13 +120,13 @@ int main(int argc, char *argv[])
     tree_root.id = 0;
     long last_id;
 
-    //exec_time = -omp_get_wtime();
+    exec_time = -omp_get_wtime();
     pts = get_points(argc, argv);
     int n_dims = atoi(argv[1]);
-
-    printf("DIMS:%d\n", n_dims);
+    
+    //printf("DIMS:%d\n", n_dims);
     long n_points = atoi(argv[2]);
-    printf("NPOINTS:%ld\n", n_points);
+    /*printf("NPOINTS:%ld\n", n_points);
     for (long i = 0; i < n_points; i++)
     {
         printf("POINT %ld\n", i);
@@ -126,10 +136,12 @@ int main(int argc, char *argv[])
         }
         printf("\n");
     }
+    */
     build_tree(&tree_root, pts, n_points, n_dims);
+    
 
     exec_time += omp_get_wtime();
     printf("%.1lf\n", exec_time);
 
-    dump_tree(tree_root, n_dims, n_points);
+    //dump_tree(tree_root, n_dims, n_points);
 }

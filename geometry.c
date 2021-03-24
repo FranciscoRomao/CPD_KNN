@@ -108,9 +108,11 @@ double *calc_distances_to_left_limit(double *left_limmit, double **projections, 
 double distance(int n_dims, double *a, double *b)
 {
     double distance = 0;
+    double aux = 0;
     for (int i = 0; i < n_dims; i++)
-    {
-        distance += pow(a[i] - b[i], 2); //a**2
+    {   
+        aux = a[i] - b[i];
+        distance += aux * aux;
     }
     distance = sqrt(distance);
     return distance;
@@ -219,4 +221,10 @@ double **project_pts2line(int n_dims, double *a, double *b, double **pts, long n
         projected_points[i] = orthogonal_projection(n_dims, pts[i], a, b);
     }
     return projected_points;
+}
+
+void get_first_coord(long n_points, double **pts, double *first_coord)
+{
+    for(int i=0; i<n_points; i++)
+        first_coord[i] = pts[i][0];
 }

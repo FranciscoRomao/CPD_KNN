@@ -40,7 +40,7 @@ void build_tree(node *newNode, double **pts, long n_points, int n_dims)
     projections = project_pts2line(n_dims, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
     //Sort points and calculate Median
     distances2a = calc_distances_to_left_limit(pts[idx_fp[0]], projections, n_points, n_dims);
-    quick_sort(pts, projections, distances2a, 0, n_points);
+    quick_sort(pts, projections, distances2a, 0, n_points - 1);
     center_idx = getMedian(projections, n_points, n_dims, newNode->center);
     //Calculate the radius
     fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, newNode->center);
@@ -86,7 +86,9 @@ int main(int argc, char *argv[])
         printf("\n");
     }
     build_tree(&tree_root, pts, n_points, n_dims);
-    //exec_time += omp_get_wtime();
-    //printf("%.1lf\n", exec_time);
-    //dump_tree(&root);
+
+    /*
+    exec_time += omp_get_wtime();
+    printf("%.1lf\n", exec_time);
+    */
 }

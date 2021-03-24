@@ -101,7 +101,7 @@ double distance(int n_dims, double *a, double *b)
     double distance = 0;
     for (int i = 0; i < n_dims; i++)
     {
-        distance += pow(a[i] - b[i], 2);
+        distance += pow(a[i] - b[i], 2); //a**2
     }
     distance = sqrt(distance);
     return distance;

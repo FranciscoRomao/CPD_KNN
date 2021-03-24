@@ -10,9 +10,9 @@ typedef struct node
     double *center;
 } node;
 
-void swap(double **pts, double **projections, double **distances2a, long a, long b);
-long partition(double **pts, double **projections, double **distances2a, long low, long high);
-void quick_sort(double **pts, double **projections, double **distances2a, long low, long high);
+void swap(double **pts, double **projections, double *distances2a, long a, long b);
+long partition(double **pts, double **projections, double *distances2a, long low, long high);
+void quick_sort(double **pts, double **projections, double *distances2a, long low, long high);
 long getMedian(double **projections, long n_points, int n_dims, double *center);
 double *calc_distances_to_left_limit(double *left_limmit, double **projections, long n_points, int n_dims);
 double distance(int n_dims, double *a, double *b);

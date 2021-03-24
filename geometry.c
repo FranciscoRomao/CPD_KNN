@@ -3,11 +3,11 @@
 #include "geometry.h"
 
 // A utility function to swap two elements
-void swap(double **pts, double **projections, double **distances2a, long a, long b)
+void swap(double **pts, double **projections, double *distances2a, long a, long b)
 {
     double *temp1 = pts[a];
     double *temp2 = projections[a];
-    double *temp3 = distances2a[a];
+    double temp3 = distances2a[a];
 
     pts[a] = pts[b];
     pts[b] = temp1;
@@ -24,10 +24,10 @@ the pivot element at its correct position in sorted
 array, and places all smaller (smaller than pivot) 
 to left of pivot and all greater elements to right 
 of pivot */
-long partition(double **pts, double **projections, double **distances2a, long low, long high)
+long partition(double **pts, double **projections, double *distances2a, long low, long high)
 {
-    long pivot = distances2a[high]; // pivot
-    long i = (low - 1);             // Index of smaller element and indicates the right position of pivot found so far
+    double pivot = distances2a[high]; // pivot
+    long i = (low - 1);               // Index of smaller element and indicates the right position of pivot found so far
 
     for (long j = low; j <= high - 1; j++)
     {
@@ -46,7 +46,7 @@ long partition(double **pts, double **projections, double **distances2a, long lo
 arr[] --> Array to be sorted, 
 low --> Starting index, 
 high --> Ending index */
-void quick_sort(double **pts, double **projections, double **distances2a, long low, long high)
+void quick_sort(double **pts, double **projections, double *distances2a, long low, long high)
 {
     if (low < high)
     {
@@ -85,7 +85,7 @@ long getMedian(double **projections, long n_points, int n_dims, double *center)
 
 double *calc_distances_to_left_limit(double *left_limmit, double **projections, long n_points, int n_dims)
 {
-    double *dists = malloc(sizeof(double) * npts);
+    double *dists = malloc(sizeof(double) * n_points);
 
     for (long i = 0; i < n_points; i++)
     {
@@ -113,7 +113,7 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
 
     for (long i = 0; i < n_points; i++)
     {
-        if ((curr_dist = distance_(n_dims, base_coords, pts[i])) > max_dist)
+        if ((curr_dist = distance(n_dims, base_coords, pts[i])) > max_dist)
         {
             max_dist = curr_dist;
             idx_newpt = i;
@@ -180,8 +180,9 @@ double *multiply(int n_dims, double *a, double constant)
 
 double *orthogonal_projection(int n_dims, double *p, double *a, double *b)
 {
-    double numerator = 0, denominator = 0, result_div = 0;
-    double result_div;
+    double numerator = 0;
+    double denominator = 0;
+    double result_div = 0;
     double *result_mult;
     double *result_sum;
     double *b_minus_a;
@@ -202,7 +203,7 @@ double *orthogonal_projection(int n_dims, double *p, double *a, double *b)
 
 double **project_pts2line(int n_dims, double *a, double *b, double **pts, long n_points)
 {
-    double **projected_points = (double *)malloc(n_dims * n_points * sizeof(double));
+    double **projected_points = (double **)malloc(n_dims * n_points * sizeof(double));
     for (int i = 0; i < n_points; i++)
     {
         projected_points[i] = orthogonal_projection(n_dims, pts[i], a, b);

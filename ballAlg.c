@@ -25,8 +25,6 @@ void build_tree(node *newNode, double **pts, long n_points, int n_dims)
     double radius;
     double *center;
     double *distances2a;
-
-    long idx2project[1] = -1; //repensar
     long center_idx;
     long fapart_idx;
     long idx_fp[2] = {0, 0}; //pontos a e b
@@ -39,10 +37,10 @@ void build_tree(node *newNode, double **pts, long n_points, int n_dims)
 
     //Calculate furthest points and make projections on their line
     recursive_furthest_apart(n_dims, n_points, pts, idx_fp);
-    projections = project_pts2line(n_dims, idx_fp[0], idx_fp[1], pts, idx2project, n_points);
+    projections = project_pts2line(n_dims, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
     //Sort points and calculate Median
-    distances2a = calc_distances_to_left_limit(idx_fp[0], projections, n_points, n_dims);
-    quick_sort(pts, projections, distances2a);
+    distances2a = calc_distances_to_left_limit(pts[idx_fp[0]], projections, n_points, n_dims);
+    quick_sort(pts, projections, distances2a, 0, n_points);
     center_idx = getMedian(projections, n_points, n_dims, newNode->center);
     //Calculate the radius
     fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, newNode->center);

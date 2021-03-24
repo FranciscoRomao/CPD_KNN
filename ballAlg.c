@@ -41,6 +41,7 @@ void build_tree(node *newNode, double **pts, long n_points, int n_dims)
     //Sort points and calculate Median
     distances2a = calc_distances_to_left_limit(pts[idx_fp[0]], projections, n_points, n_dims);
     quick_sort(pts, projections, distances2a, 0, n_points - 1);
+    newNode->center = (double *)malloc(n_dims * sizeof(double));
     center_idx = getMedian(projections, n_points, n_dims, newNode->center);
     //Calculate the radius
     fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, newNode->center);

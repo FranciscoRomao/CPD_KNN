@@ -65,7 +65,7 @@ void quick_sort(double **pts, double **projections, double *distances2a, long lo
 long getMedian(double **projections, long n_points, int n_dims, double *center)
 {
     long idx;
-    center = (double *)malloc(n_dims * sizeof(double));
+    //center = (double *)malloc(n_dims * sizeof(double));
     if (n_points % 2 != 0) //odd number of points
     {
         idx = (n_points - 1) / 2;

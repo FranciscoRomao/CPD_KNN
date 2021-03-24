@@ -1,6 +1,13 @@
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "geometry.h"
+
+void flag(int n)
+{
+    printf("Flag %d\n", n);
+    fflush(stdout);
+}
 
 // A utility function to swap two elements
 void swap(double **pts, double **projections, double *distances2a, long a, long b)

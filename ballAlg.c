@@ -4,12 +4,6 @@
 #include "gen_points.h"
 #include "geometry.h"
 
-void flag(int n)
-{
-    printf("Flag %d\n", n);
-    fflush(stdout);
-}
-
 void build_tree(node *newNode, double **pts, long n_points, int n_dims)
 {
     if (n_points == 1)
@@ -30,11 +24,24 @@ void build_tree(node *newNode, double **pts, long n_points, int n_dims)
     long idx_fp[2] = {0, 0}; //pontos a e b
 
     node *lnode = (node *)malloc(sizeof(node));
+    if (lnode == NULL)
+    {
+        printf("Error allocating memory");
+        exit(1);
+    }
+
     lnode->id = 2 * newNode->id + 1;
+    newNode->lnode = lnode;
 
     node *rnode = (node *)malloc(sizeof(node));
-    rnode->id = 2 * newNode->id + 2;
+    if (rnode == NULL)
+    {
+        printf("Error allocating memory");
+        exit(1);
+    }
 
+    rnode->id = 2 * newNode->id + 2;
+    newNode->rnode = rnode;
     //Calculate furthest points and make projections on their line
     recursive_furthest_apart(n_dims, n_points, pts, idx_fp);
     projections = project_pts2line(n_dims, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
@@ -100,11 +107,13 @@ int main(int argc, char *argv[])
     double exec_time;
     double **pts;
     node tree_root;
+    tree_root.id = 0;
     long last_id;
 
     //exec_time = -omp_get_wtime();
     pts = get_points(argc, argv);
     int n_dims = atoi(argv[1]);
+
     printf("DIMS:%d\n", n_dims);
     long n_points = atoi(argv[2]);
     printf("NPOINTS:%ld\n", n_points);

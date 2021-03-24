@@ -60,8 +60,39 @@ void build_tree(node *newNode, double **pts, long n_points, int n_dims)
     return;
 }
 
-void dump_tree(node *root)
+void print_Node(node foo, int n_dims)
 {
+    //node_id left_child_id right_child_id radius center_coordinates
+    if (foo.lnode != NULL)
+    {
+        printf("%ld %ld %ld %.6lf", foo.id, foo.rnode->id, foo.lnode->id, foo.radius);
+
+        for (int i = 0; i < n_dims; i++)
+            printf(" %.6lf", foo.center[i]);
+
+        printf("\n");
+
+        print_Node(*(foo.lnode), n_dims);
+
+        print_Node(*(foo.rnode), n_dims);
+    }
+    else
+    {
+        printf("%ld -1 -1 0.000000", foo.id);
+
+        for (int i = 0; i < n_dims; i++)
+            printf(" %.6lf", foo.center[i]);
+
+        printf("\n");
+    }
+    return;
+}
+
+void dump_tree(node tree_root, int n_dims, long n_points)
+{
+    long n_nodes = 2 * n_points - 1;
+    printf("%d %ld\n", n_dims, n_nodes);
+    print_Node(tree_root, n_dims);
 }
 
 int main(int argc, char *argv[])
@@ -88,8 +119,8 @@ int main(int argc, char *argv[])
     }
     build_tree(&tree_root, pts, n_points, n_dims);
 
-    /*
     exec_time += omp_get_wtime();
     printf("%.1lf\n", exec_time);
-    */
+
+    dump_tree(tree_root, n_dims, n_points);
 }

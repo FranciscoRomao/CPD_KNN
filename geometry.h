@@ -6,7 +6,7 @@ typedef struct node
     long id;
     struct node *lnode;
     struct node *rnode;
-    int radius;
+    double radius;
     double *center;
 } node;
 
@@ -24,4 +24,5 @@ double inner_product(int n_dims, double *a, double *b);
 double *multiply(int n_dims, double *a, double constant);
 double *orthogonal_projection(int n_dims, double *p, double *a, double *b);
 double **project_pts2line(int n_dims, double *a, double *b, double **pts, long n_points);
+void dump_tree(node tree_root, int n_dims, long n_points);
 #endif

@@ -5,7 +5,7 @@ TARGET = ballAlg
 OBJS = 
 
 FLAGS = -O3 -fopenmp -lm
-debugFLAGS = -fopenmp -g -lm
+debugFLAGS = -fopenmp -g -lm -Wall
 
 all: ballAlg
 

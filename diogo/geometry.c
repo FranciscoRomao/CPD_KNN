@@ -10,11 +10,10 @@ void flag(int n)
 }
 
 // A utility function to swap two elements
-void swap(double **pts, double **projections, double *distances2a, long a, long b)
+void swap(double **pts, double *projections,long a, long b)
 {
     double *temp1 = pts[a];
-    double *temp2 = projections[a];
-    double temp3 = distances2a[a];
+    double temp2 = projections[a];
 
     pts[a] = pts[b];
     pts[b] = temp1;
@@ -22,8 +21,6 @@ void swap(double **pts, double **projections, double *distances2a, long a, long 
     projections[a] = projections[b];
     projections[b] = temp2;
 
-    distances2a[a] = distances2a[b];
-    distances2a[b] = temp3;
 }
 
 /* This function takes last element as pivot, places 
@@ -31,21 +28,21 @@ the pivot element at its correct position in sorted
 array, and places all smaller (smaller than pivot) 
 to left of pivot and all greater elements to right 
 of pivot */
-long partition(double **pts, double **projections, double *distances2a, long low, long high)
+long partition(double **pts, double *projections, long low, long high)
 {
-    double pivot = distances2a[high]; // pivot
+    double pivot = projections[high]; // pivot
     long i = (low - 1);               // Index of smaller element and indicates the right position of pivot found so far
 
     for (long j = low; j <= high - 1; j++)
     {
         // If current element is smaller than the pivot
-        if (distances2a[j] < pivot)
+        if (projections[j] < pivot)
         {
             i++; // increment index of smaller element
-            swap(pts, projections, distances2a, i, j);
+            swap(pts, projections, i, j);
         }
     }
-    swap(pts, projections, distances2a, i + 1, high);
+    swap(pts, projections, i + 1, high);
     return (i + 1);
 }
 
@@ -53,43 +50,50 @@ long partition(double **pts, double **projections, double *distances2a, long low
 arr[] --> Array to be sorted, 
 low --> Starting index, 
 high --> Ending index */
-void quick_sort(double **pts, double **projections, double *distances2a, long low, long high)
+void quick_sort(double **pts, double *projections, long low, long high)
 {
     if (low < high)
     {
         /* pi is partitioning index, arr[p] is now 
         at right place */
-        long pi = partition(pts, projections, distances2a, low, high);
+        long pi = partition(pts, projections, low, high);
 
         // Separately sort elements before
         // partition and after partition
-        quick_sort(pts, projections, distances2a, low, pi - 1);
-        quick_sort(pts, projections, distances2a, pi + 1, high);
+        quick_sort(pts, projections, low, pi - 1);
+        quick_sort(pts, projections, pi + 1, high);
     }
 }
 
-long getMedian(double **projections, long n_points, int n_dims, double *center)
+long getMedian(double **pts, long n_points, int n_dims, double *center)
 {
     long idx;
-    //center = (double *)malloc(n_dims * sizeof(double));
     if (n_points % 2 != 0) //odd number of points
     {
         idx = (n_points - 1) / 2;
-        for (int i = 0; i < n_dims; i++)
-        {
-            center[i] = projections[idx][i];
-        }
+        orthogonal_projection(n_dims, pts[idx], pts[0], pts[n_points-1], center);
     }
     else //even number of points
     {
+        double* center1=(double*)malloc(n_dims*sizeof(double));
+        double* center2=(double*)malloc(n_dims*sizeof(double));
+        
         idx = (n_points - 2) / 2; //point to the left of median coordinates
-
-        for (int i = 0; i < n_dims; i++)
+        orthogonal_projection(n_dims, pts[idx], pts[0], pts[n_points-1], center1);
+        orthogonal_projection(n_dims, pts[idx+1], pts[0], pts[n_points-1], center2);
+        
+        for(int i=0; i<n_dims; i++)
         {
-            center[i] = (projections[idx][i] + projections[idx + 1][i]) / 2;
+            center[i] = (center1[i] + center2[i]) / 2;
         }
+
         idx = idx + 1; //point to the right of median coordinates
+        
+        free(center1);
+        free(center2);    
     }
+
+    
     return idx;
 }
 
@@ -115,6 +119,18 @@ double distance(int n_dims, double *a, double *b)
         distance += aux * aux;
     }
     distance = sqrt(distance);
+    return distance;
+}
+
+double squared_distance(int n_dims, double *a, double *b)
+{
+    double distance = 0;
+    double aux = 0;
+    for (int i = 0; i < n_dims; i++)
+    {   
+        aux = a[i] - b[i];
+        distance += aux * aux;
+    }
     return distance;
 }
 
@@ -148,9 +164,9 @@ void recursive_furthest_apart(int n_dims, long n_points, double **pts, long *idx
     return;
 }
 
-double *subtraction(int n_dims, double *a, double *b)
+
+double *subtraction(int n_dims, double *a, double *b, double* result)
 {
-    double *result = (double *)malloc(n_dims * sizeof(double));
     for (int i = 0; i < n_dims; i++)
     {
         result[i] = b[i] - a[i];
@@ -158,10 +174,8 @@ double *subtraction(int n_dims, double *a, double *b)
     return result;
 }
 
-double *sum(int n_dims, double *a, double *b)
+double *sum(int n_dims, double *a, double *b, double * result)
 {
-    double *result = (double *)malloc(n_dims * sizeof(double));
-
     for (int i = 0; i < n_dims; i++)
     {
         result[i] = a[i] + b[i];
@@ -179,10 +193,8 @@ double inner_product(int n_dims, double *a, double *b)
     return result;
 }
 
-double *multiply(int n_dims, double *a, double constant)
+double *multiply(int n_dims, double *a, double constant, double* result)
 {
-    double *result = (double *)malloc(n_dims * sizeof(double));
-
     for (int i = 0; i < n_dims; i++)
     {
         result[i] = constant * a[i];
@@ -190,41 +202,50 @@ double *multiply(int n_dims, double *a, double constant)
     return result;
 }
 
-double *orthogonal_projection(int n_dims, double *p, double *a, double *b)
+double orthogonal_projection_reduced(int n_dims, double *p, double *a, double* p_minus_a, double* b_minus_a)
+{
+    subtraction(n_dims, a, p, p_minus_a);
+    double result=inner_product(n_dims, p_minus_a, b_minus_a);
+    return result;
+}
+
+void orthogonal_projection(int n_dims, double *p, double *a, double *b,double* result_sum)
 {
     double numerator = 0;
     double denominator = 0;
     double result_div = 0;
-    double *result_mult;
-    double *result_sum;
-    double *b_minus_a;
-    double *p_minus_a;
+    double *result_mult = (double *)malloc(n_dims * sizeof(double));
+    double *b_minus_a = (double *)malloc(n_dims * sizeof(double));
+    double *p_minus_a = (double *)malloc(n_dims * sizeof(double));
 
-    b_minus_a = subtraction(n_dims, a, b);
-    p_minus_a = subtraction(n_dims, a, p);
+    
+    subtraction(n_dims, a, b, b_minus_a);
+    subtraction(n_dims, a, p, p_minus_a);
     numerator = inner_product(n_dims, p_minus_a, b_minus_a);
     denominator = inner_product(n_dims, b_minus_a, b_minus_a);
     result_div = numerator / denominator;
-    result_mult = multiply(n_dims, b_minus_a, result_div);
-    result_sum = sum(n_dims, result_mult, a);
+    multiply(n_dims, b_minus_a, result_div, result_mult);
+    sum(n_dims, result_mult, a, result_sum);
     free(b_minus_a);
     free(p_minus_a);
     free(result_mult);
-    return result_sum;
+    return;
 }
 
-double **project_pts2line(int n_dims, double *a, double *b, double **pts, long n_points)
+void project_pts2line(int n_dims, double* projections, double *a, double *b, double **pts, long n_points)
 {
-    double **projected_points = (double **)malloc(n_dims * n_points * sizeof(double));
+    double *p_minus_a = (double *)malloc(n_dims * sizeof(double));
+    double *b_minus_a = (double *)malloc(n_dims * sizeof(double));
+    
+    subtraction(n_dims, a, b, b_minus_a);
+    
     for (int i = 0; i < n_points; i++)
     {
-        projected_points[i] = orthogonal_projection(n_dims, pts[i], a, b);
+        projections[i] = orthogonal_projection_reduced(n_dims, pts[i], a,p_minus_a,b_minus_a);
     }
-    return projected_points;
-}
 
-void get_first_coord(long n_points, double **pts, double *first_coord)
-{
-    for(int i=0; i<n_points; i++)
-        first_coord[i] = pts[i][0];
+    free(p_minus_a);
+    free(b_minus_a);
+    
+    return;
 }

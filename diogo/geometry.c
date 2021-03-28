@@ -258,11 +258,14 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
     double *p_minus_a = (double *)malloc(n_dims * sizeof(double));
     double *b_minus_a = (double *)malloc(n_dims * sizeof(double));
     
-    subtraction(n_dims, a, b, b_minus_a);
-    
+    if(a[0]>b[0])
+        subtraction(n_dims, b, a, b_minus_a);
+    else
+        subtraction(n_dims, a, b, b_minus_a);
+
     for (int i = 0; i < n_points; i++)
-    {
-        projections[i] = orthogonal_projection_reduced(n_dims, a, pts[i],p_minus_a,b_minus_a);
+    {   
+        projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
     }
 
     free(p_minus_a);

@@ -262,7 +262,7 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
     
     for (int i = 0; i < n_points; i++)
     {
-        projections[i] = orthogonal_projection_reduced(n_dims, pts[i], a,p_minus_a,b_minus_a);
+        projections[i] = orthogonal_projection_reduced(n_dims, a, pts[i],p_minus_a,b_minus_a);
     }
 
     free(p_minus_a);

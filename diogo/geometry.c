@@ -8,10 +8,31 @@ void flag(int n)
     printf("Flag %d\n", n);
     fflush(stdout);
 }
+/*
+void swap(double **pts, double *projections, long a, long b)
+{   
+    int n_dims=2;
+    double* copy=(double*)malloc(n_dims*sizeof(double));
+    for(int i=0;i<n_dims;i++){
+        copy[i]=pts[a][i];
+    }
+    for(int i=0;i<n_dims;i++){
+        pts[a][i]=pts[b][i];
+    }
+    for(int i=0;i<n_dims;i++){
+        pts[b][i]=copy[i];
+    }
+    double temp2 = projections[a];
+    projections[a] = projections[b];
+    projections[b] = temp2;
+
+}
+*/
 
 // A utility function to swap two elements
-void swap(double **pts, double *projections,long a, long b)
-{
+void swap(double **pts, double *projections, long a, long b)
+{   
+    
     double *temp1 = pts[a];
     double temp2 = projections[a];
 

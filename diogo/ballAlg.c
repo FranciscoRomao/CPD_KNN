@@ -99,36 +99,21 @@ int main(int argc, char *argv[])
 
     exec_time = -omp_get_wtime();
     pts = get_points(argc, argv);
+    
     int n_dims = atoi(argv[1]);
     long n_points = atoi(argv[2]);
     long n_nodes = 2 * n_points - 1;
 
     double* projections=(double*)malloc(n_points*sizeof(double));
-    //printf("DIMS:%d\n", n_dims);
     tree=(node*)malloc(n_nodes*sizeof(node));
-    /*printf("NPOINTS:%ld\n", n_points);
-    for (long i = 0; i < n_points; i++)
-    {
-        printf("POINT %ld\n", i);
-        for (int j = 0; j < n_dims; j++)
-        {
-            printf("%f ", pts[i][j]);
-        }
-        printf("\n");
-    }
-    */
     build_tree(tree, 0, pts, projections, n_points, n_dims);
-
+  
     exec_time += omp_get_wtime();
-    printf("%.1lf\n", exec_time);
 
     dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
-
-    for(long i=0; i<n_points; i++)
-        free(pts[i]);
-
-
-    free(pts);
     free(projections);
+    free(pts[0]);
+    free(pts);
+    printf("%.1lf\n", exec_time); 
 }

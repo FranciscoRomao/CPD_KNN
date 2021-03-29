@@ -99,6 +99,7 @@ int main(int argc, char *argv[])
 
     exec_time = -omp_get_wtime();
     pts = get_points(argc, argv);
+    double* pts_first_position=pts[0];
     
     int n_dims = atoi(argv[1]);
     long n_points = atoi(argv[2]);
@@ -113,7 +114,7 @@ int main(int argc, char *argv[])
     dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
-    free(pts[0]);
+    free(pts_first_position);
     free(pts);
     printf("%.1lf\n", exec_time); 
 }

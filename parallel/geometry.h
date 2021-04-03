@@ -12,7 +12,7 @@ void swap(double **pts, double *projections,long a, long b);
 long partition(double **pts, double *projections, long low, long high);
 void quick_sort(double **pts, double *projections, long low, long high);
 long getMedian(double **pts, long n_points, int n_dims, double *center);
-double *calc_distances_to_left_limit(double *left_limmit, double **projections, long n_points, int n_dims);
+//double *calc_distances_to_left_limit(double *left_limmit, double **projections, long n_points, int n_dims);
 double distance(int n_dims, double *a, double *b);
 double squared_distance(int n_dims, double *a, double *b);
 long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords);

@@ -4,6 +4,8 @@
 #include "gen_points.h"
 #include "geometry.h"
 
+#define OMP_NUM_THREADS 4
+
 void build_tree(node* tree, long node_idx, double **pts, double* projections, long n_points, int n_dims)
 {   
     if (n_points == 1)
@@ -57,7 +59,7 @@ void print_Node(long node_id ,node* tree, int n_dims)
         for (int i = 0; i < n_dims; i++)
             printf(" %.6lf", foo.center[i]);
 
-        printf("\n");
+        printf(" \n");
 
         print_Node(foo.L,tree, n_dims);
 
@@ -70,7 +72,7 @@ void print_Node(long node_id ,node* tree, int n_dims)
         for (int i = 0; i < n_dims; i++)
             printf(" %.6lf", foo.center[i]);
 
-        printf("\n");
+        printf(" \n");
     }
     return;
 }
@@ -116,5 +118,5 @@ int main(int argc, char *argv[])
     free(projections);
     free(pts_first_position);
     free(pts);
-    printf("%.1lf\n", exec_time); 
+    fprintf(stderr, "%.1lf\n", exec_time); 
 }

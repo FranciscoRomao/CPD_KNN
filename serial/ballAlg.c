@@ -57,7 +57,7 @@ void print_Node(long node_id ,node* tree, int n_dims)
         for (int i = 0; i < n_dims; i++)
             printf(" %.6lf", foo.center[i]);
 
-        printf("\n");
+        printf(" \n");
 
         print_Node(foo.L,tree, n_dims);
 
@@ -70,7 +70,7 @@ void print_Node(long node_id ,node* tree, int n_dims)
         for (int i = 0; i < n_dims; i++)
             printf(" %.6lf", foo.center[i]);
 
-        printf("\n");
+        printf(" \n");
     }
     return;
 }
@@ -111,10 +111,10 @@ int main(int argc, char *argv[])
   
     exec_time += omp_get_wtime();
 
-    //dump_tree(tree, n_dims, n_points,n_nodes);
+    dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);
     free(pts);
-    printf("%.1lf\n", exec_time); 
+    fprintf(stderr, "%.1lf\n", exec_time); 
 }

@@ -8,26 +8,6 @@ void flag(int n)
     printf("Flag %d\n", n);
     fflush(stdout);
 }
-/*
-void swap(double **pts, double *projections, long a, long b)
-{   
-    int n_dims=2;
-    double* copy=(double*)malloc(n_dims*sizeof(double));
-    for(int i=0;i<n_dims;i++){
-        copy[i]=pts[a][i];
-    }
-    for(int i=0;i<n_dims;i++){
-        pts[a][i]=pts[b][i];
-    }
-    for(int i=0;i<n_dims;i++){
-        pts[b][i]=copy[i];
-    }
-    double temp2 = projections[a];
-    projections[a] = projections[b];
-    projections[b] = temp2;
-
-}
-*/
 
 // A utility function to swap two elements
 void swap(double **pts, double *projections, long a, long b)
@@ -117,7 +97,7 @@ long getMedian(double **pts, long n_points, int n_dims, double *center)
     
     return idx;
 }
-
+/*
 double *calc_distances_to_left_limit(double *left_limmit, double **projections, long n_points, int n_dims)
 {
     double *dists = malloc(sizeof(double) * n_points);
@@ -129,7 +109,7 @@ double *calc_distances_to_left_limit(double *left_limmit, double **projections, 
 
     return dists;
 }
-
+*/
 double distance(int n_dims, double *a, double *b)
 {
     double distance = 0;
@@ -162,7 +142,7 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
 
     for (long i = 0; i < n_points; i++)
     {
-        if ((curr_dist = distance(n_dims, base_coords, pts[i])) > max_dist)
+        if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)
         {
             max_dist = curr_dist;
             idx_newpt = i;
@@ -184,7 +164,6 @@ void recursive_furthest_apart(int n_dims, long n_points, double **pts, long *idx
     }
     return;
 }
-
 
 double *subtraction(int n_dims, double *a, double *b, double* result)
 {
@@ -262,10 +241,23 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
         subtraction(n_dims, b, a, b_minus_a);
     else
         subtraction(n_dims, a, b, b_minus_a);
-
-    for (int i = 0; i < n_points; i++)
-    {   
-        projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
+        
+    if(n_points>10000){
+        #pragma omp parallel
+        {   
+            #pragma omp for 
+            for (int i = 0; i < n_points; i++)
+            {   
+                projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
+            }
+            
+        }
+    }
+    else{
+        for (int i = 0; i < n_points; i++)
+        {   
+            projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
+        } 
     }
 
     free(p_minus_a);

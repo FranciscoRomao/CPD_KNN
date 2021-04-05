@@ -32,7 +32,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
     project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
     //Sort points and calculate Median
     //distances2a = calc_distances_to_left_limit(pts[idx_fp[0]], projections, n_points, n_dims);
-    quick_sort(pts, projections, 0, n_points - 1);
+    quick_sort_parallel(pts, projections, n_points - 1);
     tree[node_idx].center = (double *)malloc(n_dims * sizeof(double));
     center_idx = getMedian(pts, n_points, n_dims, tree[node_idx].center);
     
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
   
     exec_time += omp_get_wtime();
 
-    //dump_tree(tree, n_dims, n_points,n_nodes);
+    dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);

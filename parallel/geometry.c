@@ -52,7 +52,8 @@ arr[] --> Array to be sorted,
 low --> Starting index, 
 high --> Ending index */
 void quick_sort(double **pts, double *projections, long low, long high)
-{
+{   
+    int cutoff=10000;
     if (low < high)
     {
         /* pi is partitioning index, arr[p] is now 
@@ -61,8 +62,27 @@ void quick_sort(double **pts, double *projections, long low, long high)
 
         // Separately sort elements before
         // partition and after partition
-        quick_sort(pts, projections, low, pi - 1);
-        quick_sort(pts, projections, pi + 1, high);
+        if(high-low<cutoff){
+            quick_sort(pts, projections, low, pi - 1);
+            quick_sort(pts, projections, pi + 1, high);
+        }
+        else
+        {   
+            #pragma omp task
+            {quick_sort(pts, projections, low, pi - 1);}
+            #pragma omp task
+            {quick_sort(pts, projections, pi + 1, high);}
+        }
+    }
+}
+
+void quick_sort_parallel(double **pts, double *projections, long n_points){
+    #pragma omp parallel
+    {
+        #pragma omp single nowait
+        {
+            quick_sort(pts, projections, 0, n_points - 1);
+        }
     }
 }
 

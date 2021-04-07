@@ -45,21 +45,24 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
     
     if(node_idx == 0 || node_idx == tree[0].L || node_idx == tree[0].R || node_idx == tree[tree[0].L].L || node_idx == tree[tree[0].R].R)
     {
-        #pragma omp parallel sections
+        #pragma omp parallel
         {
             //printf("para  - %ld\n", node_idx);
-                #pragma omp section
+            #pragma omp single 
+            {
+                #pragma omp task
                 {
                     printf("open left  - %ld\n", node_idx);
                     build_tree(tree,lnode_id, pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
                     printf("closed left  - %ld\n", node_idx);
                 }
-                #pragma omp section
+                #pragma omp task
                 {
                     printf("open right - %ld\n", node_idx);
                     build_tree(tree,rnode_id, pts + center_idx, projections+center_idx, n_points - center_idx, n_dims);
                     printf("close right - %ld\n", node_idx);
                 }
+            }
         }
     }
     else

@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
   
     exec_time += omp_get_wtime();
 
-    dump_tree(tree, n_dims, n_points,n_nodes);
+    //dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);

@@ -4,7 +4,7 @@
 #include "gen_points.h"
 #include "geometry.h"
 
-#define OMP_NUM_THREADS 4
+#define OMP_NUM_THREADS 2
 
 void build_tree(node* tree, long node_idx, double **pts, double* projections, long n_points, int n_dims)
 {   
@@ -39,12 +39,36 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
     //Calculate the radius
     fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, tree[node_idx].center);
     tree[node_idx].radius = distance(n_dims, pts[fapart_idx], tree[node_idx].center);
-
-    build_tree(tree,lnode_id, pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
+    
     long rnode_id = node_idx + 2 *  center_idx;
     tree[node_idx].R = rnode_id;
-    build_tree(tree,rnode_id, pts + center_idx, projections+center_idx, n_points - center_idx, n_dims);
 
+    if(node_idx == 0)
+    {
+        #pragma omp parallel 
+        {
+            #pragma omp sections
+            {
+                #pragma omp section
+                {
+                    build_tree(tree,lnode_id, pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
+                }
+                #pragma omp section
+                {
+                        build_tree(tree,rnode_id, pts + center_idx, projections+center_idx, n_points - center_idx, n_dims);
+                }
+            }
+        }
+    }
+    else
+    {
+    build_tree(tree,lnode_id, pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
+    build_tree(tree,rnode_id, pts + center_idx, projections+center_idx, n_points - center_idx, n_dims);
+    }
+   
+        
+   
+    
     return;
 }
 
@@ -113,7 +137,7 @@ int main(int argc, char *argv[])
   
     exec_time += omp_get_wtime();
 
-    //dump_tree(tree, n_dims, n_points,n_nodes);
+   //dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);

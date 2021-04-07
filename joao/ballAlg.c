@@ -43,7 +43,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
     long rnode_id = node_idx + 2 *  center_idx;
     tree[node_idx].R = rnode_id;
     
-    if(node_idx == 0 || node_idx == tree[0].L || node_idx == tree[0].R)
+    if(node_idx == 0 || node_idx == tree[0].L || node_idx == tree[0].R || node_idx == tree[tree[0].L].L || node_idx == tree[tree[0].R].R)
     {
         #pragma omp parallel sections
         {

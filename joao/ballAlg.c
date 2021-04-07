@@ -4,7 +4,7 @@
 #include "gen_points.h"
 #include "geometry.h"
 
-#define OMP_NUM_THREADS 2
+#define OMP_NUM_THREADS 4
 
 void build_tree(node* tree, long node_idx, double **pts, double* projections, long n_points, int n_dims)
 {   
@@ -42,22 +42,20 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
     
     long rnode_id = node_idx + 2 *  center_idx;
     tree[node_idx].R = rnode_id;
-
-    if(node_idx == 0)
+    
+    if(node_idx == 0 || node_idx == tree[0].L || node_idx == tree[0].R)
     {
-        #pragma omp parallel 
+        #pragma omp parallel sections
         {
-            #pragma omp sections
-            {
+            printf("Parallel\n");
                 #pragma omp section
                 {
                     build_tree(tree,lnode_id, pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
                 }
                 #pragma omp section
                 {
-                        build_tree(tree,rnode_id, pts + center_idx, projections+center_idx, n_points - center_idx, n_dims);
+                    build_tree(tree,rnode_id, pts + center_idx, projections+center_idx, n_points - center_idx, n_dims);
                 }
-            }
         }
     }
     else

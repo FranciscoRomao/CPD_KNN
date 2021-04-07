@@ -242,7 +242,7 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
     else
         subtraction(n_dims, a, b, b_minus_a);
         
-    if(n_points>50000){
+    if(n_points>25000){
         #pragma omp parallel
         {   
             #pragma omp for 

@@ -54,6 +54,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         double median; //value of the median
         long fapart_idx; // indice of the point furthest apart from the center
         long idx_fp[2] = {0, 0}; // indices of the points furthest apart
+        double radius_candidate[2] = {0, 0}; //possible radius 
         
         //compute furthest apart points in the current set    
         recursive_furthest_apart(n_dims, n_points, pts, idx_fp); 
@@ -101,7 +102,17 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         }
 
         //compute the furthest point of the ball center and thus the radius
-        fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, tree[node_idx].center);
+        radius_candidate[0] = distance(n_dims, pts[idx_fp[0]], tree[node_idx].center);
+        radius_candidate[1] = distance(n_dims, pts[idx_fp[1]], tree[node_idx].center);
+
+        if (radius_candidate[1]>radius_candidate[0]) 
+        {
+            tree[node_idx].radius = radius_candidate[1];
+        }
+        else 
+        {
+            tree[node_idx].radius = radius_candidate[0];
+        }          
         tree[node_idx].radius = distance(n_dims, pts[fapart_idx], tree[node_idx].center);
         
         long rnode_id = node_idx + 2 * center_idx;

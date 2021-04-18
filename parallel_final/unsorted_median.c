@@ -4,6 +4,7 @@
 #include <time.h>
 #include <float.h>
 #include "unsorted_median.h"
+#include "quicksort.h"
 
 /**
  * Compare function used inside quicksort
@@ -55,7 +56,12 @@ double sorted_median(double *vector, int n_items)
         return result;
     }
 
-    qsort(vector, n_items, sizeof(double), cmpfunc);
+    if(0){
+        quick_sort_parallel(vector, n_items, 100000);
+    }
+    else{
+        qsort(vector, n_items, sizeof(double), cmpfunc);
+    }
 
     if(n_items % 2 != 0)
     {
@@ -87,21 +93,39 @@ double buildSet(double *setL, double *setR, int* counterL, int* counterR, double
     *counterL=0;
     *counterR=0;
 
-    for(int i=0; i<n_items; i++)
-    {
-        //printArray(setL, *counterL);
-        if(vector[i]<median)
+    if(1){
+        for(int i=0; i<n_items; i++) 
         {
-            (*counterL)++;
-            setL[(*counterL)-1] = vector[i];
-        }
-        else
-        {
-            (*counterR)++;
-            setR[(*counterR)-1] = vector[i];
+            //printArray(setL, *counterL);
+            if(vector[i]<median)
+            {   
+
+                (*counterL)++;
+                setL[(*counterL)-1] = vector[i];
+            }
+            else
+            {   
+                (*counterR)++;
+                setR[(*counterR)-1] = vector[i];
+            }
         }
     }
-
+    else{
+        for(int i=0; i<n_items; i++)
+        {
+            //printArray(setL, *counterL);
+            if(vector[i]<median)
+            {
+                (*counterL)++;
+                setL[(*counterL)-1] = vector[i];
+            }
+            else
+            {
+                (*counterR)++;
+                setR[(*counterR)-1] = vector[i];
+            }
+        }
+    }
     //printArray(setL, *counterL);
     //printf("Sets criados: setL %d items, setR %d items, idx da mediana: %d\n\n", *counterL, *counterR, (*counterL));
     return (*counterL);
@@ -118,25 +142,26 @@ double median(double *vector, int n_items)
 {
     int full_splits = n_items/5;
     int semi_splits = n_items % 5;
-    int i=0;
     double result;
     int n_medians = 0;
     double *medians = (double *)malloc(n_items/2 * sizeof(double));
     
     //printArray(vector, 17);
-
-    for(i=0; i<full_splits; i++)
-    {
-        medians[i] = sorted_median(vector + 5*i, 5);
-        //printf("Median do grupo %d: %lf\n", i, medians[i]);
+    if(1){
+        //#pragma omp parallel for
+        for(int i=0; i<full_splits; i++)
+        {
+            medians[i] = sorted_median(vector + 5*i, 5);
+            //printf("Median do grupo %d: %lf\n", i, medians[i]);
+        }
     }
-
+    
     if(semi_splits != 0)
     {
-        medians[i] = sorted_median(vector + 5*full_splits, semi_splits);
+        medians[full_splits] = sorted_median(vector + 5*full_splits, semi_splits);
         //printf("Median do semi grupo %d: %lf\n", i, medians[i]);
     }
-
+    
     n_medians = full_splits + (semi_splits!=0 ? 1 : 0);
 
     if(n_medians <= 5)
@@ -158,7 +183,6 @@ double median(double *vector, int n_items)
     return result;
 }
 
-
 /**
  * Finds the smallest element of a vector
  * @param   vector    Vector to find the median of
@@ -169,14 +193,15 @@ double getSmallest(double *vector, int n_items)
 {
     double min = DBL_MAX;
 
+    #pragma omp parallel for reduction(min:min)
     for(int i=0; i<n_items; i++)
     {
         if(vector[i] < min)
             min = vector[i];
     }
+
     return min;
 }
-
 
 /**
  * Finds the k smallest element of a vector
@@ -199,12 +224,22 @@ double getKsmallest(double* vector, long k, long n_items)
     
     //printArray(vector, n_items);
 
+    //printf("foo-1\n");
+    fflush(stdout);
+
     result = median(vector_cpy, n_items);
+
+    //printf("foo-2\n");
+    fflush(stdout);
 
     arraycpy(vector_cpy, vector, n_items);
 
+    //printf("foo-3\n");
+    fflush(stdout);    
     result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, n_items, result);
 
+    //printf("foo-4\n");
+    fflush(stdout);
     //printf("Target idx: %d, result idx: %d\n", k, result_idx);
 
     while(k > result_idx || k < result_idx)
@@ -257,11 +292,11 @@ long getLowerNeighborIdx(double* vector, long n_items, double result)
         if (vector[i] > result)
         {
             continue;
-        } 
+        }
         else if ((vector[i] < result))
         {
             diff = result-vector[i];
-            if ( diff < min_diff || min_diff == -1 )
+            if (diff < min_diff || min_diff == -1 )
             {
                 min_diff = diff;
                 neighbor_idx = i;
@@ -354,7 +389,9 @@ void compare_with_median (double* projections, double** pts, double median, long
  */
 long find_idx_from_value(double *projections, long n_points, double value)
 {
-    for(int i=0; i<n_points; i++)
+    int i=0;
+    
+    for(i=0; i<n_points; i++)
     {
         if(projections[i] == value)
             return i;

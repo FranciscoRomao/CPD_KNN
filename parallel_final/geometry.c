@@ -52,6 +52,7 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
     double max_dist = -1, curr_dist = 0;
     long idx_newpt = 0;
 
+    #pragma omp paralell for reduction(max:max_dist) 
     for (long i = 0; i < n_points; i++)
     {
         if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)
@@ -217,10 +218,19 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
         subtraction(n_dims, b, a, b_minus_a);
     else
         subtraction(n_dims, a, b, b_minus_a);
-
-    for (int i = 0; i < n_points; i++)
-    {   
-        projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
+    
+    if(1){
+        #pragma omp parallel for
+        for (int i = 0; i < n_points; i++)
+        {   
+            projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
+        }
+    }
+    else{
+        for (int i = 0; i < n_points; i++)
+        {   
+            projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
+        }
     }
 
     free(p_minus_a);

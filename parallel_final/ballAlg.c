@@ -52,15 +52,14 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
     {
         long median_idx; //indice of the median
         double median; //value of the median
-        long fapart_idx; // indice of the point furthest apart from the center
         long idx_fp[2] = {0, 0}; // indices of the points furthest apart
-        double radius_candidate[2] = {0, 0}; //possible radius 
+        double radius_candidate[2] = {0, 0}; //possible radius
         
-        //compute furthest apart points in the current set    
+        //compute furthest apart points in the current set
         recursive_furthest_apart(n_dims, n_points, pts, idx_fp); 
         //pseudo-projection of all points (enough to know relative positions) 
         project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
-
+  
         if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
         {
             long median_left_idx; //indice of the immediatly smaller value than the median
@@ -91,13 +90,21 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
 
         }
         else //odd n_pts -> median is the central value
-        {   
+        {
             //compute median
             median = getKsmallest(projections, n_points/2, n_points);
+            //printf("foo1\n");
+            fflush(stdout);
             median_idx = find_idx_from_value(projections, n_points, median);
+            //printf("foo2\n");
+            fflush(stdout);
             //compute and set center of the node
             orthogonal_projection(n_dims, pts[median_idx], pts[idx_fp[0]], pts[idx_fp[1]], tree[node_idx].center);
+            //printf("foo3\n");
+            fflush(stdout);
             compare_with_median(projections, pts, median, n_points);
+            //printf("foo4\n");
+            fflush(stdout);
             center_idx = (n_points - 1) / 2;
         }
 
@@ -112,14 +119,15 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         else 
         {
             tree[node_idx].radius = radius_candidate[0];
-        }          
-        tree[node_idx].radius = distance(n_dims, pts[fapart_idx], tree[node_idx].center);
-        
+        }
+
+      
         long rnode_id = node_idx + 2 * center_idx;
         tree[node_idx].R = rnode_id;
 
 
-        if (1==1)
+        if (0)
+        //
         //(node_idx == tree[0].R || node_idx == tree[0].L) //node_idx == 0)
         // || node_idx == tree[tree[0].L].L || node_idx == tree[tree[0].R].R || node_idx == tree[tree[0].L].R || node_idx == tree[tree[0].R].L)
         {

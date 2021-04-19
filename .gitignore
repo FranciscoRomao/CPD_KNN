@@ -9,4 +9,5 @@ ballAlg
 # Executable Files
 *.exe
 
-#
+# Tree files
+*.tree

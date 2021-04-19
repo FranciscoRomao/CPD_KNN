@@ -126,7 +126,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         tree[node_idx].R = rnode_id;
 
 
-        if (0)
+        if (n_points<10000)
         //
         //(node_idx == tree[0].R || node_idx == tree[0].L) //node_idx == 0)
         // || node_idx == tree[tree[0].L].L || node_idx == tree[tree[0].R].R || node_idx == tree[tree[0].L].R || node_idx == tree[tree[0].R].L)

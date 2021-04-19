@@ -176,7 +176,7 @@ double getSmallest(double *vector, int n_items)
 {
     double min = DBL_MAX;
 
-    #pragma omp parallel for reduction(min:min)
+    //#pragma omp parallel for reduction(min:min)
     for(int i=0; i<n_items; i++)
     {
         if(vector[i] < min)

@@ -52,7 +52,7 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
     double max_dist = -1, curr_dist = 0;
     long idx_newpt = 0;
 
-    #pragma omp paralell for reduction(max:max_dist) 
+    #pragma omp parallel for reduction(max:max_dist) 
     for (long i = 0; i < n_points; i++)
     {
         if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)

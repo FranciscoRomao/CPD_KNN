@@ -93,39 +93,23 @@ double buildSet(double *setL, double *setR, int* counterL, int* counterR, double
     *counterL=0;
     *counterR=0;
 
-    if(1){
-        for(int i=0; i<n_items; i++) 
-        {
-            //printArray(setL, *counterL);
-            if(vector[i]<median)
-            {   
 
-                (*counterL)++;
-                setL[(*counterL)-1] = vector[i];
-            }
-            else
-            {   
-                (*counterR)++;
-                setR[(*counterR)-1] = vector[i];
-            }
+    for(int i=0; i<n_items; i++) 
+    {
+        //printArray(setL, *counterL);
+        if(vector[i]<median)
+        {   
+
+            (*counterL)++;
+            setL[(*counterL)-1] = vector[i];
+        }
+        else
+        {   
+            (*counterR)++;
+            setR[(*counterR)-1] = vector[i];
         }
     }
-    else{
-        for(int i=0; i<n_items; i++)
-        {
-            //printArray(setL, *counterL);
-            if(vector[i]<median)
-            {
-                (*counterL)++;
-                setL[(*counterL)-1] = vector[i];
-            }
-            else
-            {
-                (*counterR)++;
-                setR[(*counterR)-1] = vector[i];
-            }
-        }
-    }
+
     //printArray(setL, *counterL);
     //printf("Sets criados: setL %d items, setR %d items, idx da mediana: %d\n\n", *counterL, *counterR, (*counterL));
     return (*counterL);
@@ -147,14 +131,13 @@ double median(double *vector, int n_items)
     double *medians = (double *)malloc(n_items/2 * sizeof(double));
     
     //printArray(vector, 17);
-    if(1){
-        //#pragma omp parallel for
-        for(int i=0; i<full_splits; i++)
-        {
-            medians[i] = sorted_median(vector + 5*i, 5);
-            //printf("Median do grupo %d: %lf\n", i, medians[i]);
-        }
+    #pragma omp parallel for if(n_items>10000)
+    for(int i=0; i<full_splits; i++)
+    {
+        medians[i] = sorted_median(vector + 5*i, 5);
+        //printf("Median do grupo %d: %lf\n", i, medians[i]);
     }
+    
     
     if(semi_splits != 0)
     {

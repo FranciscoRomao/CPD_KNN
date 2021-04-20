@@ -52,14 +52,14 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
     double max_dist = -1, curr_dist = 0;
     long idx_newpt = 0;
 
-    //#pragma if(n_points==1000000) omp for reduction(max:max_dist) //if(n_points>250000)
+    #pragma if(n_points==1000000) omp for reduction(max:max_dist) //if(n_points>250000)
     for (long i = 0; i < n_points; i++)
     {   
-        /*if(n_points==1000000){
+        if(n_points==1000000){
             //printf("omp_get_num_threads(): %d\n",omp_get_num_threads());
             //printf("omp_get_max_threads(): %d\n",omp_get_max_threads());
             printf("omp_get_thread_num(): %d\n",omp_get_thread_num());
-        }*/
+        }
         if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)
         {
             max_dist = curr_dist;

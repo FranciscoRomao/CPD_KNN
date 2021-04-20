@@ -125,7 +125,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         long rnode_id = node_idx + 2 * center_idx;
         tree[node_idx].R = rnode_id;
 
-        if(n_points==1000000)//(n_points<500000)
+        #pragma if(n_points==1000000) parallel//(n_points<500000)
         //
         //(node_idx == tree[0].R || node_idx == tree[0].L) //node_idx == 0)
         // || node_idx == tree[tree[0].L].L || node_idx == tree[tree[0].R].R || node_idx == tree[tree[0].L].R || node_idx == tree[tree[0].R].L)
@@ -236,11 +236,10 @@ int main(int argc, char *argv[])
     tree = (node*)malloc(n_nodes*sizeof(node));
     
     // construct THE TREE
-    #pragma omp parallel
-    {
-        #pragma omp single
-        build_tree(tree, 0, pts, projections, n_points, n_dims);
-    }
+    
+    //#pragma omp single
+    build_tree(tree, 0, pts, projections, n_points, n_dims);
+    
 
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();

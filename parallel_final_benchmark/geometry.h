@@ -10,8 +10,8 @@ typedef struct node {
 
 double distance(int n_dims, double *a, double *b);
 double squared_distance(int n_dims, double *a, double *b);
-long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords, int threads_available);
-void recursive_furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp, int threads_available);
+long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords);
+void recursive_furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp);
 double *subtraction(int n_dims, double *a, double *b, double* result);
 double *sum(int n_dims, double *a, double *b, double * result);
 double inner_product(int n_dims, double *a, double *b);

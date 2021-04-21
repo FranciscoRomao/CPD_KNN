@@ -1,7 +1,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <omp.h>
 #include "geometry.h"
 
 /**
@@ -48,33 +47,25 @@ double squared_distance(int n_dims, double *a, double *b)
  * @param **pts set of the points
  * @param coordinates of the point to search from
  */
-long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords, int threads_available)
+long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords)
 {
     double max_dist = -1, curr_dist = 0;
     long idx_newpt = 0;
 
-    if (threads_available > 1)
-    {
-        #pragma omp parallel for reduction(max:max_dist)
-        for (long i = 0; i < n_points; i++)
-        {   
-            if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)
-            {
-                max_dist = curr_dist;
-                idx_newpt = i;
-            }
+    //#pragma if(n_points==1000000) omp for reduction(max:max_dist) //if(n_points>250000)
+    for (long i = 0; i < n_points; i++)
+    {   
+        if(n_points==1000000){
+            //printf("omp_get_num_threads(): %d\n",omp_get_num_threads());
+            //printf("omp_get_max_threads(): %d\n",omp_get_max_threads());
+            //printf("omp_get_thread_num(): %d\n",omp_get_thread_num());
         }
-    }
-    else 
-    {
-        for (long i = 0; i < n_points; i++)
-        {   
-            if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)
-            {
-                max_dist = curr_dist;
-                idx_newpt = i;
-            }
+        if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)
+        {
+            max_dist = curr_dist;
+            idx_newpt = i;
         }
+        
     }
     return idx_newpt;
 }
@@ -88,16 +79,16 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
  * @param **pts array with the points
  * @param *idx_fp 
  */
-void recursive_furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp, int threads_available)
+void recursive_furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp)
 {
     long idx_new_fp = 0;
 
-    idx_new_fp = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]], threads_available);
+    idx_new_fp = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
     if (idx_new_fp != idx_fp[1])
     {
         idx_fp[1] = idx_fp[0];
         idx_fp[0] = idx_new_fp;
-        recursive_furthest_apart(n_dims, n_points, pts, idx_fp, threads_available);
+        recursive_furthest_apart(n_dims, n_points, pts, idx_fp);
     }
     return;
 }

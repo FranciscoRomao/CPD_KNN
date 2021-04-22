@@ -127,28 +127,23 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
             build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available);
         }
         else if (threads_available == 1) //number of threads available in this recursion is down to one
-        {           
-            #pragma omp task
-            {
-                build_tree(tree, lnode_id, pts, projections, center_idx, n_dims, threads_available); //center_idx happens to be the number of points in the set
-            }
-            #pragma omp task
-            {
-                build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available);
-            }
+        {        
+            build_tree(tree, lnode_id, pts, projections, center_idx, n_dims, threads_available); //center_idx happens to be the number of points in the set
+            build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available);
+    
         }
         else if (node_idx != 0 && threads_available > 1)//still threads left to put to work
         {   
                 #pragma omp task
                 {
-                    threads_available--;
+                    threads_available = threads_available/2;
                     omp_set_nested(2);
                     omp_set_num_threads(threads_available);
                     build_tree(tree, lnode_id, pts, projections, center_idx, n_dims, threads_available); //center_idx happens to be the number of points in the set
                 }
                 #pragma omp task
                 {
-                    threads_available--;
+                    threads_available = threads_available/2;
                     omp_set_nested(2);
                     omp_set_num_threads(threads_available);
                     build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available) ;
@@ -279,7 +274,7 @@ int main(int argc, char *argv[])
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();
 
-    dump_tree(tree, n_dims, n_points,n_nodes);
+    //dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);

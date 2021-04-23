@@ -11,3 +11,5 @@ ballAlg
 
 # Tree files
 *.tree
+
+!executables/**

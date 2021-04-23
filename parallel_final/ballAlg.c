@@ -58,18 +58,18 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         //compute furthest apart points in the current set
         recursive_furthest_apart(n_dims, n_points, pts, idx_fp, threads_available); 
         //pseudo-projection of all points (enough to know relative positions) 
-        for(int i=0; i<n_points; i++)
-           printf("%lf ", pts[i][0]);
+        //for(int i=0; i<n_points; i++)
+        //   printf("%lf ", pts[i][0]);
     
-         printf("\n");
+        //printf("\n");
   
         project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
 
-        for(int i=0; i<n_points; i++)
-           printf("%lf ", projections[i]);
+        //for(int i=0; i<n_points; i++)
+        //   printf("%lf ", projections[i]);
     
-         printf("\n");
-         //exit(-1);
+        //printf("\n");
+        //exit(-1);
   
         if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
         {
@@ -284,12 +284,11 @@ int main(int argc, char *argv[])
 
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();
-
+    fprintf(stderr, "%.1lf\n", exec_time);
     dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);
     free(pts);
-    fprintf(stderr, "%.1lf\n", exec_time);
 
 }

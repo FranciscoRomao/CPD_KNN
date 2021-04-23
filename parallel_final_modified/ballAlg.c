@@ -58,7 +58,19 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         //compute furthest apart points in the current set
         recursive_furthest_apart(n_dims, n_points, pts, idx_fp, threads_available); 
         //pseudo-projection of all points (enough to know relative positions) 
-        project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
+        //for(int i=0; i<n_points; i++)
+        //   printf("%lf ", pts[i][0]);
+    
+        //printf("\n");
+    
+        //printf("Furthest pts idx: %ld and %ld\n", idx_fp[0], idx_fp[1]);
+        
+        project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points, threads_available);
+        //for(int i=0; i<n_points; i++)
+        //   printf("%lf ", projections[i]);
+    
+        //printf("\n");
+        //exit(-1);
   
         if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
         {
@@ -68,7 +80,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
             double median_right; //immediatly bigger value than the median
 
             //compute median as the avergae of the two central pts
-            median_right = getKsmallest(projections, n_points/2 , n_points, threads_available);
+            median_right = getKsmallest(projections, n_points/2 , n_points);
             median_right_idx = find_idx_from_value(projections, n_points, median_right);
             median_left_idx = getLowerNeighborIdx(projections, n_points, median_right);
             median_left = projections[median_left_idx];
@@ -92,7 +104,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         else //odd n_pts -> median is the central value
         {
             //compute median
-            median = getKsmallest(projections, n_points/2, n_points,threads_available);
+            median = getKsmallest(projections, n_points/2, n_points);
             median_idx = find_idx_from_value(projections, n_points, median);
 
             //compute and set center of the node
@@ -127,49 +139,26 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
             build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available);
         }
         else if (threads_available == 1) //number of threads available in this recursion is down to one
-        {           
-            #pragma omp task
-            {
-                build_tree(tree, lnode_id, pts, projections, center_idx, n_dims, threads_available); //center_idx happens to be the number of points in the set
-            }
-            #pragma omp task
-            {
-                build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available);
-            }
+        {        
+            build_tree(tree, lnode_id, pts, projections, center_idx, n_dims, threads_available); //center_idx happens to be the number of points in the set
+            build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available);
+    
         }
-        else if (node_idx != 0 && threads_available > 1)//still threads left to put to work
-        {   
-                #pragma omp task
-                {
-                    threads_available--;
-                    omp_set_nested(2);
-                    omp_set_num_threads(threads_available);
-                    build_tree(tree, lnode_id, pts, projections, center_idx, n_dims, threads_available); //center_idx happens to be the number of points in the set
-                }
-                #pragma omp task
-                {
-                    threads_available--;
-                    omp_set_nested(2);
-                    omp_set_num_threads(threads_available);
-                    build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available) ;
-                }
-        }
-        else if (node_idx == 0 && threads_available != -1)//multiple threads available and root node -> start parallel in the building of the tree
+        else if (threads_available > 1)//still threads left to put to work
         {   
             #pragma omp parallel
             {
                 #pragma omp single
                 {
-                    threads_available = threads_available/2;
                     #pragma omp task
                     {
-                        omp_set_nested(2);
+                        threads_available = threads_available/2;
                         omp_set_num_threads(threads_available);
                         build_tree(tree, lnode_id, pts, projections, center_idx, n_dims, threads_available); //center_idx happens to be the number of points in the set
                     }
                     #pragma omp task
                     {
-                        omp_set_nested(2);
+                        threads_available = threads_available/2;
                         omp_set_num_threads(threads_available);
                         build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available) ;
                     }
@@ -272,18 +261,21 @@ int main(int argc, char *argv[])
     {
         threads_available = -1; 
     }
+
+    //for(int i=0;i<n_points;i++)
+    //    pts[i][0]=0;
+    //pts[n_points-1][0]=0;
     // construct THE TREE
     build_tree(tree, 0, pts, projections, n_points, n_dims, threads_available);
     
 
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();
-
-    //dump_tree(tree, n_dims, n_points,n_nodes);
+    fprintf(stderr, "%.1lf\n", exec_time);
+    dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);
     free(pts);
-    fprintf(stderr, "%.1lf\n", exec_time);
 
 }

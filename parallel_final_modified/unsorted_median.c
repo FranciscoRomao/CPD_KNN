@@ -40,7 +40,7 @@ void arraycpy(double* dest, double* sourc, int n_items)
  * @param   n_items   Number of items of the vector
  * @return  Median of the vector  
  */
-double sorted_median(double *vector, int n_items, int parallel)
+double sorted_median(double *vector, int n_items)
 {
     double result;
     
@@ -56,7 +56,7 @@ double sorted_median(double *vector, int n_items, int parallel)
         return result;
     }
 
-    if(parallel){
+    if(0){
         quick_sort_parallel(vector, n_items, 100000);
     }
     else{
@@ -93,6 +93,8 @@ double buildSet(double *setL, double *setR, int* counterL, int* counterR, double
     *counterL=0;
     *counterR=0;
 
+    //printf("n_items - %d \nmedian - %lf", n_items, median);
+    //fflush(stdout);
 
     for(int i=0; i<n_items; i++) 
     {
@@ -122,46 +124,60 @@ double buildSet(double *setL, double *setR, int* counterL, int* counterR, double
  * @param   n_items   Number of items of the vector
  * @return  Median of the vector
  */
-double median(double *vector, int n_items, int threads_available)
+double median(double *vector, int n_items)
 {
     int full_splits = n_items/5;
     int semi_splits = n_items % 5;
     double result;
     int n_medians = 0;
     double *medians = (double *)malloc(n_items/2 * sizeof(double));
+    //printf("M\n");
+    //fflush(stdout);
     
     //printArray(vector, 17);
-    #pragma if(threads_available>1) omp parallel for //if(n_items>900000)//(n_items>250000)
+    //#pragma omp parallel for if(n_items>900000)//(n_items>250000)
     for(int i=0; i<full_splits; i++)
     {
-        medians[i] = sorted_median(vector + 5*i, 5,0);
+        medians[i] = sorted_median(vector + 5*i, 5);
         //printf("Median do grupo %d: %lf\n", i, medians[i]);
     }
     
     
     if(semi_splits != 0)
     {
-        medians[full_splits] = sorted_median(vector + 5*full_splits, semi_splits,0);
+        medians[full_splits] = sorted_median(vector + 5*full_splits, semi_splits);
         //printf("Median do semi grupo %d: %lf\n", i, medians[i]);
     }
     
     n_medians = full_splits + (semi_splits!=0 ? 1 : 0);
 
+    //printf("#_m - %d\n", n_medians);
+    //fflush(stdout);
+
+    //for(int i=0; i<n_items; i++)
+    //    printf("%lf ", vector[i]);
+    
+    //printf("\n");
+    //printf("result - %lf\n", result);
+    //exit(-1);
+
     if(n_medians <= 5)
     {
-        result = sorted_median(medians, n_medians,0);
+        result = sorted_median(medians, n_medians);
         //printf("Mediana das medianas: %lf\n", result);
         //result = buildSet(setL, setR, vector, n_items, result);
         free(medians);
         return result;
     }
 
-    result = median(medians, full_splits + (semi_splits!=0 ? 1 : 0),threads_available);
+    result = median(medians, full_splits + (semi_splits!=0 ? 1 : 0));
     free(medians);
 
     //printf("Mediana das medianas: %lf\n", result);
 
     //result = buildSet(setL, setR, vector, n_items, result);
+
+    
 
     return result;
 }
@@ -172,11 +188,11 @@ double median(double *vector, int n_items, int threads_available)
  * @param   n_items   Number of items of the vector
  * @return  Values of the smallest element
  */
-double getSmallest(double *vector, int n_items, int threads_available)
+double getSmallest(double *vector, int n_items)
 {
     double min = DBL_MAX;
 
-    //#pragma if(threads_available>1) omp parallel for reduction(min:min)
+    //#pragma omp parallel for reduction(min:min)
     for(int i=0; i<n_items; i++)
     {
         if(vector[i] < min)
@@ -193,36 +209,46 @@ double getSmallest(double *vector, int n_items, int threads_available)
  * @param   n_items Number of items of the array
  * @return  Value of the k smallest element
  */
-double getKsmallest(double* vector, long k, long n_items, int threads_available)
+double getKsmallest(double* vector, long k, long n_items)
 {
     int L_items;
     int R_items;
     double result;
-    int result_idx;
+    int result_idx = -30;
     double *setL = (double *)malloc(n_items * sizeof(double));
     double *setR = (double *)malloc(n_items * sizeof(double));
     double *vector_cpy = (double *)malloc(n_items * sizeof(double));
     
+    //for(int i=0; i<n_items; i++)
+    //    printf("%lf ", vector[i]);
+    
+    //printf("\n");
+    //printf("result - %lf\n", result);
+    //exit(-1);
+
     arraycpy(vector_cpy, vector, n_items);
     
     //printArray(vector, n_items);
 
     //printf("foo-1\n");
-    fflush(stdout);
+    //fflush(stdout);
 
-    result = median(vector_cpy, n_items,threads_available);
+    result = median(vector_cpy, n_items);
 
-    //printf("foo-2\n");
-    fflush(stdout);
+    
 
     arraycpy(vector_cpy, vector, n_items);
 
     //printf("foo-3\n");
-    fflush(stdout);    
+    //fflush(stdout);    
     result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, n_items, result);
 
-    //printf("foo-4\n");
-    fflush(stdout);
+    if (result_idx == -30)
+    {
+        exit(-1);
+    }
+    //printf("result_idx - %d\n", result_idx);
+    //fflush(stdout);
     //printf("Target idx: %d, result idx: %d\n", k, result_idx);
 
     while(k > result_idx || k < result_idx)
@@ -230,8 +256,9 @@ double getKsmallest(double* vector, long k, long n_items, int threads_available)
         if(k < result_idx)
         {
             arraycpy(vector_cpy, setL, L_items);
-
-            result = median(vector_cpy, L_items,threads_available);
+            //printf("foo-2\n");
+            //fflush(stdout);
+            result = median(vector_cpy, L_items);
             result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, L_items, result);
             //printf("Target idx: %d, result idx: %d\n", k, result_idx);
         }
@@ -241,13 +268,16 @@ double getKsmallest(double* vector, long k, long n_items, int threads_available)
             arraycpy(vector_cpy, setR, R_items);
             {
                 k = k - result_idx;
-                result = median(vector_cpy, R_items,threads_available);
+                //printf("foo-3 %d\n", result_idx);
+                //fflush(stdout);
+                result = median(vector_cpy, R_items);
                 result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, R_items, result);
-                //printf("Target idx: %d, result idx: %d\n", k, result_idx);
+                //printf("Target idx: %ld, result idx: %d\n", k, result_idx);
             }
         }
     }
-    result = getSmallest(setR, R_items,threads_available);
+
+    result = getSmallest(setR, R_items);
     free(vector_cpy);
     free(setL);
     free(setR);

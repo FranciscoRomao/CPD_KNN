@@ -278,6 +278,10 @@ int main(int argc, char *argv[])
     {
         threads_available = -1; 
     }
+
+    //for(int i=0;i<n_points;i++)
+    //    pts[i][0]=0;
+    //pts[n_points-1][0]=0;
     // construct THE TREE
     build_tree(tree, 0, pts, projections, n_points, n_dims, threads_available);
     

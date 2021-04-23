@@ -68,8 +68,8 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
 
     if (threads_available > 1)
     {
-        
-        #pragma omp parallel for reduction(max_n_idx_max_:max_point) 
+        #pragma omp taskloop reduction(max_n_idx_max_:max_point)
+        //#pragma omp parallel for reduction(max_n_idx_max_:max_point) 
         for (long i = 0; i < n_points; i++)
         {   
             if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)

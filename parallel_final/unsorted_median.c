@@ -93,8 +93,8 @@ double buildSet(double *setL, double *setR, int* counterL, int* counterR, double
     *counterL=0;
     *counterR=0;
 
-    printf("n_items - %d \nmedian - %lf", n_items, median);
-    fflush(stdout);
+    //printf("n_items - %d \nmedian - %lf", n_items, median);
+    //fflush(stdout);
 
     for(int i=0; i<n_items; i++) 
     {
@@ -131,8 +131,8 @@ double median(double *vector, int n_items)
     double result;
     int n_medians = 0;
     double *medians = (double *)malloc(n_items/2 * sizeof(double));
-    printf("M\n");
-    fflush(stdout);
+    //printf("M\n");
+    //fflush(stdout);
     
     //printArray(vector, 17);
     //#pragma omp parallel for if(n_items>900000)//(n_items>250000)
@@ -151,15 +151,15 @@ double median(double *vector, int n_items)
     
     n_medians = full_splits + (semi_splits!=0 ? 1 : 0);
 
-    printf("#_m - %d\n", n_medians);
-    fflush(stdout);
+    //printf("#_m - %d\n", n_medians);
+    //fflush(stdout);
 
-    for(int i=0; i<n_items; i++)
-        printf("%lf ", vector[i]);
+    //for(int i=0; i<n_items; i++)
+    //    printf("%lf ", vector[i]);
     
-    printf("\n");
-    printf("result - %lf\n", result);
-    exit(-1);
+    //printf("\n");
+    //printf("result - %lf\n", result);
+    //exit(-1);
 
     if(n_medians <= 5)
     {
@@ -219,19 +219,19 @@ double getKsmallest(double* vector, long k, long n_items)
     double *setR = (double *)malloc(n_items * sizeof(double));
     double *vector_cpy = (double *)malloc(n_items * sizeof(double));
     
-    for(int i=0; i<n_items; i++)
-        printf("%lf ", vector[i]);
+    //for(int i=0; i<n_items; i++)
+    //    printf("%lf ", vector[i]);
     
-    printf("\n");
-    printf("result - %lf\n", result);
-    exit(-1);
+    //printf("\n");
+    //printf("result - %lf\n", result);
+    //exit(-1);
 
     arraycpy(vector_cpy, vector, n_items);
     
     //printArray(vector, n_items);
 
-    printf("foo-1\n");
-    fflush(stdout);
+    //printf("foo-1\n");
+    //fflush(stdout);
 
     result = median(vector_cpy, n_items);
 
@@ -240,15 +240,15 @@ double getKsmallest(double* vector, long k, long n_items)
     arraycpy(vector_cpy, vector, n_items);
 
     //printf("foo-3\n");
-    fflush(stdout);    
+    //fflush(stdout);    
     result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, n_items, result);
 
     if (result_idx == -30)
     {
         exit(-1);
     }
-    printf("result_idx - %d\n", result_idx);
-    fflush(stdout);
+    //printf("result_idx - %d\n", result_idx);
+    //fflush(stdout);
     //printf("Target idx: %d, result idx: %d\n", k, result_idx);
 
     while(k > result_idx || k < result_idx)
@@ -256,8 +256,8 @@ double getKsmallest(double* vector, long k, long n_items)
         if(k < result_idx)
         {
             arraycpy(vector_cpy, setL, L_items);
-            printf("foo-2\n");
-            fflush(stdout);
+            //printf("foo-2\n");
+            //fflush(stdout);
             result = median(vector_cpy, L_items);
             result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, L_items, result);
             //printf("Target idx: %d, result idx: %d\n", k, result_idx);
@@ -268,11 +268,11 @@ double getKsmallest(double* vector, long k, long n_items)
             arraycpy(vector_cpy, setR, R_items);
             {
                 k = k - result_idx;
-                printf("foo-3 %d\n", result_idx);
-                fflush(stdout);
+                //printf("foo-3 %d\n", result_idx);
+                //fflush(stdout);
                 result = median(vector_cpy, R_items);
                 result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, R_items, result);
-                printf("Target idx: %ld, result idx: %d\n", k, result_idx);
+                //printf("Target idx: %ld, result idx: %d\n", k, result_idx);
             }
         }
     }

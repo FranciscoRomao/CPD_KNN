@@ -13,10 +13,7 @@ max_n_idx max_n_idx_max(max_n_idx a, max_n_idx b) {
     return a.maximum > b.maximum ? a : b; 
 }
 
-max_n_idx max_n_idx_reduction(){
-    #pragma omp for
-}
-
+#pragma omp declare reduction(max_n_idx_max_: struct max_n_idx: omp_out=max_n_idx_max(omp_out, omp_in))
 //#pragma omp declare reduction(xyz_min: struct xyz: omp_out=xyz_min2(omp_out, omp_in))\
 //    initializer(omp_priv={0, 0, DBL_MAX})
 
@@ -72,7 +69,7 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
     if (threads_available > 1)
     {
         
-        #pragma omp parallel for reduction(max_n_idx_max:max_point) 
+        #pragma omp parallel for reduction(max_n_idx_max_:max_point) 
         for (long i = 0; i < n_points; i++)
         {   
             if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)

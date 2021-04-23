@@ -69,7 +69,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
            printf("%lf ", projections[i]);
     
          printf("\n");
-         exit(-1);
+         //exit(-1);
   
         if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
         {
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();
 
-    //dump_tree(tree, n_dims, n_points,n_nodes);
+    dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);

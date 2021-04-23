@@ -58,7 +58,18 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         //compute furthest apart points in the current set
         recursive_furthest_apart(n_dims, n_points, pts, idx_fp, threads_available); 
         //pseudo-projection of all points (enough to know relative positions) 
+        for(int i=0; i<n_points; i++)
+           printf("%lf ", pts[i][0]);
+    
+         printf("\n");
+  
         project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
+
+        for(int i=0; i<n_points; i++)
+           printf("%lf ", projections[i]);
+    
+         printf("\n");
+         exit(-1);
   
         if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
         {

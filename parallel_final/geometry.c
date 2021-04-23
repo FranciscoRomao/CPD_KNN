@@ -4,6 +4,22 @@
 #include <omp.h>
 #include "geometry.h"
 
+typedef struct max_n_idx{
+    double maximum;
+    long int index; 
+}max_n_idx;
+
+max_n_idx max_n_idx_max(max_n_idx a, max_n_idx b) {
+    return a.maximum > b.maximum ? a : b; 
+}
+
+max_n_idx max_n_idx_reduction(){
+    #pragma omp for
+}
+
+//#pragma omp declare reduction(xyz_min: struct xyz: omp_out=xyz_min2(omp_out, omp_in))\
+//    initializer(omp_priv={0, 0, DBL_MAX})
+
 /**
 * Computes euclidean distance
  * @param *a point a
@@ -50,18 +66,19 @@ double squared_distance(int n_dims, double *a, double *b)
  */
 long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords, int threads_available)
 {
-    double max_dist = -1, curr_dist = 0;
-    long idx_newpt = 0;
+    double curr_dist = 0;
+    max_n_idx max_point={-1.0,-1};
 
     if (threads_available > 1)
     {
-        #pragma omp parallel for reduction(max:max_dist)
+        
+        #pragma omp parallel for reduction(max_n_idx_max:max_point) 
         for (long i = 0; i < n_points; i++)
         {   
-            if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)
+            if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)
             {
-                max_dist = curr_dist;
-                idx_newpt = i;
+                max_point.maximum = curr_dist;
+                max_point.index = i;
             }
         }
     }
@@ -69,14 +86,14 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
     {
         for (long i = 0; i < n_points; i++)
         {   
-            if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)
+            if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)
             {
-                max_dist = curr_dist;
-                idx_newpt = i;
+                max_point.maximum = curr_dist;
+                max_point.index = i;
             }
         }
     }
-    return idx_newpt;
+    return max_point.index;
 }
 
 

@@ -18,7 +18,7 @@ double inner_product(int n_dims, double *a, double *b);
 double *multiply(int n_dims, double *a, double constant, double* result);
 double orthogonal_projection_reduced(int n_dims, double *p, double *a, double* p_minus_a, double* b_minus_a);
 void orthogonal_projection(int n_dims, double *p, double *a, double *b,double* result_sum);
-void project_pts2line(int n_dims, double* projections, double *a, double *b, double **pts, long n_points);
+void project_pts2line(int n_dims, double* projections, double *a, double *b, double **pts, long n_points, int threads_available);
 
 
 #endif

@@ -62,9 +62,10 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         //   printf("%lf ", pts[i][0]);
     
         //printf("\n");
-  
-        project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
-
+    
+        printf("Furthest pts idx: %ld and %ld\n", idx_fp[0], idx_fp[1]);
+        
+        project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points, threads_available);
         //for(int i=0; i<n_points; i++)
         //   printf("%lf ", projections[i]);
     

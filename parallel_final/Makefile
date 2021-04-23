@@ -10,19 +10,19 @@ debugFLAGS = -fopenmp -g -lm -Wall
 all: ballAlg
 
 $(TARGET): gen_points.o geometry.o unsorted_median.o quicksort.o
-	gcc $(MAIN)  $^ -o $@ $(FLAGS)
+	gcc $(MAIN)  $^ -o $@ $(debugFLAGS)
 
 gen_points.o: gen_points.c
-	gcc $^ -c $(FLAGS)
+	gcc $^ -c $(debugFLAGS)
 
 geometry.o: geometry.c
-	gcc $^ -c $(FLAGS)
+	gcc $^ -c $(debugFLAGS)
 
 unsorted_median.o:unsorted_median.c
-	gcc $^ -c $(FLAGS)
+	gcc $^ -c $(debugFLAGS)
 
 quicksort.o:quicksort.c
-	gcc $^ -c $(FLAGS)
+	gcc $^ -c $(debugFLAGS)
 
 # $^ - representa as dependencias do comando
 # $@ - representa o ficheiro de saida do comando

@@ -254,10 +254,10 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
     
     if (threads_available > 1)
     { 
-        #pragma omp taskloop firstprivate(p_minus_a, flag) 
+        #pragma omp taskloop //firstprivate(p_minus_a, flag)
         for (int i = 0; i < n_points; i++)
         {   
-            //printf("i:%d  id: %d\n\n",i,omp_get_thread_num());
+            printf("i:%d  id: %d\n\n",i,omp_get_thread_num());
             if (flag == 0)
             {
                 flag = 1;

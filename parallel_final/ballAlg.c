@@ -58,20 +58,8 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         //compute furthest apart points in the current set
         recursive_furthest_apart(n_dims, n_points, pts, idx_fp, threads_available); 
         //pseudo-projection of all points (enough to know relative positions) 
-        //for(int i=0; i<n_points; i++)
-        //   printf("%lf ", pts[i][0]);
-    
-        //printf("\n");
-    
-        printf("Furthest pts idx: %ld and %ld\n", idx_fp[0], idx_fp[1]);
-        
         project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points, threads_available);
-        //for(int i=0; i<n_points; i++)
-        //   printf("%lf ", projections[i]);
-    
-        //printf("\n");
-        //exit(-1);
-  
+
         if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
         {
             long median_left_idx; //indice of the immediatly smaller value than the median
@@ -99,7 +87,6 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
             //place pts which projection is smaller than the median to left half of the array and greater to right half 
             compare_with_median(projections, pts, median, n_points);
             center_idx = (n_points / 2);
-
         }
         else //odd n_pts -> median is the central value
         {
@@ -127,11 +114,8 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
             tree[node_idx].radius = radius_candidate[0];
         }
 
-      
         long rnode_id = node_idx + 2 * center_idx;
         tree[node_idx].R = rnode_id;
-
-
 
         if(threads_available == -1) //number of threads available is always one
         {
@@ -285,15 +269,13 @@ int main(int argc, char *argv[])
     //pts[n_points-1][0]=0;
     // construct THE TREE
     build_tree(tree, 0, pts, projections, n_points, n_dims, threads_available);
-    
 
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();
     fprintf(stderr, "%.1lf\n", exec_time);
-    dump_tree(tree, n_dims, n_points,n_nodes);
+    //dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);
     free(pts);
-
 }

@@ -67,8 +67,8 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
 
     if (threads_available > 1)
     {
-        #pragma omp taskloop reduction(max_n_idx_max_:max_point)
-        //#pragma omp parallel for reduction(max_n_idx_max_:max_point) 
+        //#pragma omp taskloop reduction(max_n_idx_max_:max_point)
+        #pragma omp parallel for reduction(max_n_idx_max_:max_point) 
         for (long i = 0; i < n_points; i++)
         {   
             if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)
@@ -192,12 +192,10 @@ double *multiply(int n_dims, double *a, double constant, double* result)
  */
 double orthogonal_projection_reduced(int n_dims, double *p, double *a, double* p_minus_a, double* b_minus_a)
 {
-    
-    printf("%lf %x %lf %x %x %d\n", *p, p, a, *a, p_minus_a, omp_get_thread_num());
-    
     subtraction(n_dims, a, p, p_minus_a);
     
-    double result=inner_product(n_dims, p_minus_a, b_minus_a);
+    double result = inner_product(n_dims, p_minus_a, b_minus_a);
+
     return result;
 }
 
@@ -244,41 +242,47 @@ void orthogonal_projection(int n_dims, double *p, double *a, double *b, double* 
 void project_pts2line(int n_dims, double* projections, double *a, double *b, double **pts, long n_points, int threads_available)
 {
     double *b_minus_a = (double *)malloc(n_dims * sizeof(double));
-    double *p_minus_a = NULL;
-    int flag = 0;
     
     if(a[0]>b[0])
         subtraction(n_dims, b, a, b_minus_a);
     else
         subtraction(n_dims, a, b, b_minus_a);
     
-    if (threads_available > 1)
-    { 
-        #pragma omp parallel for private(p_minus_a, flag) 
+    if(threads_available > 1)
+    {
+        double *pre_p_minus_a = (double *)malloc(n_dims * sizeof(double) * omp_get_max_threads());
+        double **p_minus_a = (double**) malloc(sizeof(double*) * omp_get_max_threads());
+    
+        if (p_minus_a == NULL || pre_p_minus_a == NULL)
+        {
+            printf("Problema no alloc de pre_p_minus_a ou p_minus_a");
+            exit(-1);
+        }
+
+        for(int i = 0; i < omp_get_max_threads(); i++)
+        {
+            p_minus_a[i] = &pre_p_minus_a[i * n_dims];
+        }
+
+        #pragma omp taskloop
         for (int i = 0; i < n_points; i++)
         {   
-            if (flag == 0)
-            {
-                flag = 1;
-                printf("malloc\n");
-                p_minus_a = (double *)malloc(n_dims * sizeof(double));
-            }
-            // if (p_minus_a == NULL)
-            //     exit(-1);
-            projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
+            projections[i] = orthogonal_projection_reduced(n_dims, pts[i], a, p_minus_a[omp_get_thread_num()%omp_get_max_threads()], b_minus_a);
         }
-        //free(p_minus_a);   
+        
+        free(pre_p_minus_a);
+        free(p_minus_a);
     }
     else
     {
-        p_minus_a = (double *)malloc(n_dims * sizeof(double));
+        double* p_minus_a = (double *)malloc(n_dims * sizeof(double));
         for (int i = 0; i < n_points; i++)
         {   
             projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
         }
         free(p_minus_a);
     }
-   
+
     free(b_minus_a);
     
     return;

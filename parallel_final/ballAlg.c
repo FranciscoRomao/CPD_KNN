@@ -5,6 +5,16 @@
 #include "geometry.h"
 #include "unsorted_median.h"
 
+/**
+ * Construct the ballAlg algorithm's tree
+ * @param tree : array where all the tree nodes are stored
+ * @param node_idx : id of the node
+ * @param pts : points
+ * @param projections : projections of the points
+ * @param n_points : number of points
+ * @param n_dims : number of dimensions of the points
+ * @param threads_available : number of available threads to execute the current recursion
+ */
 void build_tree(node* tree, long node_idx, double **pts, double* projections, long n_points, int n_dims, int threads_available)
 {
     if (n_points == 1) //if the node is a leaf
@@ -24,7 +34,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
 
     tree[node_idx].center = (double *)malloc(n_dims * sizeof(double));
 
-    if(n_points == 2) //only two points in the set -> easier/lesser operations
+    if(n_points == 2) //only two points in the set -> easier/less operations
     {
         double* aux;
         if (pts[0][0] > pts[1][0]) //sort ascending if not already
@@ -101,21 +111,8 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
  
             center_idx = (n_points - 1) / 2;
         }
-/*
-        //compute the furthest point of the ball center and thus the radius
-        radius_candidate[0] = distance(n_dims, pts[idx_fp[0]], tree[node_idx].center);
-        radius_candidate[1] = distance(n_dims, pts[idx_fp[1]], tree[node_idx].center);
 
-        if (radius_candidate[1]>radius_candidate[0]) 
-        {
-            tree[node_idx].radius = radius_candidate[1];
-        }
-        else 
-        {
-            tree[node_idx].radius = radius_candidate[0];
-        }
-*/
-	fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, tree[node_idx].center, threads_available);
+	    fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, tree[node_idx].center, threads_available);
     	tree[node_idx].radius = distance(n_dims, pts[fapart_idx], tree[node_idx].center);
         long rnode_id = node_idx + 2 * center_idx;
         tree[node_idx].R = rnode_id;
@@ -184,7 +181,6 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
 void print_Node(long node_id ,node* tree, int n_dims)
 {   
     node foo = tree[node_id];
-    //node_id left_child_id right_child_id radius center_coordinates
     if (foo.L != -1)
     {
         printf("%ld %ld %ld %.6lf", node_id, foo.L, foo.R, foo.radius);
@@ -267,10 +263,6 @@ int main(int argc, char *argv[])
         threads_available = -1; 
     }
 
-    //for(int i=0;i<n_points;i++)
-    //    pts[i][0]=0;
-    //pts[n_points-1][0]=0;
-    // construct THE TREE
     build_tree(tree, 0, pts, projections, n_points, n_dims, threads_available);
 
     //____________END_TIME_BENCHMARK_____________

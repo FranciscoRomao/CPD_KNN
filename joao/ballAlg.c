@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
     
     int n_dims = atoi(argv[1]);
     long n_points = atoi(argv[2]);
-    long n_nodes = 2 * n_points - 1;
+    long n_odes = 2 * n_points - 1;
 
     double* projections=(double*)malloc(n_points*sizeof(double));
     tree=(node*)malloc(n_nodes*sizeof(node));

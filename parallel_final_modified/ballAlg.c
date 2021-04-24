@@ -113,7 +113,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
  
             center_idx = (n_points - 1) / 2;
         }
-
+        
         //compute the furthest point of the ball center and thus the radius
         radius_candidate[0] = distance(n_dims, pts[idx_fp[0]], tree[node_idx].center);
         radius_candidate[1] = distance(n_dims, pts[idx_fp[1]], tree[node_idx].center);
@@ -132,9 +132,10 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         tree[node_idx].R = rnode_id;
 
 
-
-        if(threads_available == -1) //number of threads available is always one
-        {
+        
+        if(1)//threads_available == -1) //number of threads available is always one
+        {   
+            printf("Here");
             build_tree(tree, lnode_id, pts, projections, center_idx, n_dims, threads_available); //center_idx happens to be the number of points in the set
             build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available);
         }
@@ -146,8 +147,6 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         }
         else if (node_idx != 0 && threads_available > 1)//still threads left to put to work
         {   
-            #pragma omp parallel
-            {
                 #pragma omp single
                 {
                     #pragma omp task
@@ -163,7 +162,6 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
                         build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available) ;
                     }
                 }
-            }
         }
         else if (node_idx == 0 && threads_available != -1)//multiple threads available and root node -> start parallel in the building of the tree
         {   
@@ -184,10 +182,11 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
                     }
                 }
             }
-        }
-            
+        }    
         return;
-    } 
+    }
+
+    
 }
 
 /**
@@ -287,7 +286,7 @@ int main(int argc, char *argv[])
     //pts[n_points-1][0]=0;
     // construct THE TREE
     build_tree(tree, 0, pts, projections, n_points, n_dims, threads_available);
-    
+    exit(-3);
 
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();

@@ -211,7 +211,7 @@ double orthogonal_projection_reduced(int n_dims, double *p, double *a, double* p
  * @param   result_sum  its used to return by reference the reduced orthogonal projection
 */
 void orthogonal_projection(int n_dims, double *p, double *a, double *b, double* result_sum)
-{
+{   
     double numerator = 0;
     double denominator = 0;
     double result_div = 0;
@@ -226,9 +226,9 @@ void orthogonal_projection(int n_dims, double *p, double *a, double *b, double* 
     result_div = numerator / denominator;
     multiply(n_dims, b_minus_a, result_div, result_mult);
     sum(n_dims, result_mult, a, result_sum);
-    //free(b_minus_a);
-    //free(p_minus_a);
-    //free(result_mult);
+    free(b_minus_a);
+    free(p_minus_a);
+    free(result_mult);
     return;
 }
 
@@ -242,33 +242,31 @@ void orthogonal_projection(int n_dims, double *p, double *a, double *b, double* 
  * [return] : result
  */
 void project_pts2line(int n_dims, double* projections, double *a, double *b, double **pts, long n_points, int threads_available)
-{
+{   
+    printf("Projection\n");
     double *b_minus_a = (double *)malloc(n_dims * sizeof(double));
     double *p_minus_a = NULL;
-    int flag = 0;
-    
     if(a[0]>b[0])
         subtraction(n_dims, b, a, b_minus_a);
     else
         subtraction(n_dims, a, b, b_minus_a);
     
-    if (threads_available > 1)
+    if (1)//threads_available > 1)
     { 
-        #pragma omp taskloop //firstprivate(p_minus_a, flag)
-        for (int i = 0; i < n_points; i++)
-        {   
-            printf("i:%d  id: %d\n\n",i,omp_get_thread_num());
-            if (flag == 0)
-            {
-                flag = 1;
-                //printf("malloc\n");
-                p_minus_a = (double *)malloc(n_dims * sizeof(double));
+        #pragma omp parallel firstprivate(p_minus_a)
+        {
+            p_minus_a = (double *)malloc(n_dims * sizeof(double));
+            #pragma omp for
+            for (int i = 0; i < n_points; i++)
+            {   
+                //printf("i:%d  id: %d\n\n",i,omp_get_thread_num());
+
+                // if (p_minus_a == NULL)
+                //     exit(-1);
+                projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
             }
-            // if (p_minus_a == NULL)
-            //     exit(-1);
-            projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
+            free(p_minus_a); 
         }
-        //free(p_minus_a);   
     }
     else
     {
@@ -277,10 +275,10 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
         {   
             projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
         }
-        //free(p_minus_a);
+        free(p_minus_a);
     }
    
-    //free(b_minus_a);
+    free(b_minus_a);
     
     return;
 }

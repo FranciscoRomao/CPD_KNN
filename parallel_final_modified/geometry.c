@@ -251,7 +251,7 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
     else
         subtraction(n_dims, a, b, b_minus_a);
     
-    if (1)//threads_available > 1)
+    if (threads_available > 1)
     { 
         #pragma omp parallel firstprivate(p_minus_a)
         {

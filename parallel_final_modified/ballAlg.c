@@ -135,7 +135,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         
         if(1)//threads_available == -1) //number of threads available is always one
         {   
-            printf("Here");
+            //printf("Here");
             build_tree(tree, lnode_id, pts, projections, center_idx, n_dims, threads_available); //center_idx happens to be the number of points in the set
             build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, threads_available);
         }
@@ -286,7 +286,6 @@ int main(int argc, char *argv[])
     //pts[n_points-1][0]=0;
     // construct THE TREE
     build_tree(tree, 0, pts, projections, n_points, n_dims, threads_available);
-    exit(-3);
 
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();

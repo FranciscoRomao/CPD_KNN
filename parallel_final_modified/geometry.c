@@ -67,8 +67,8 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
 
     if (threads_available > 1)
     {
-        #pragma omp taskloop reduction(max_n_idx_max_:max_point)
-        //#pragma omp parallel for reduction(max_n_idx_max_:max_point) 
+        //#pragma omp taskloop reduction(max_n_idx_max_:max_point)
+        #pragma omp parallel for reduction(max_n_idx_max_:max_point) 
         for (long i = 0; i < n_points; i++)
         {   
             if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)
@@ -243,7 +243,7 @@ void orthogonal_projection(int n_dims, double *p, double *a, double *b, double* 
  */
 void project_pts2line(int n_dims, double* projections, double *a, double *b, double **pts, long n_points, int threads_available)
 {   
-    printf("Projection\n");
+    //printf("Projection\n");
     double *b_minus_a = (double *)malloc(n_dims * sizeof(double));
     double *p_minus_a = NULL;
     if(a[0]>b[0])

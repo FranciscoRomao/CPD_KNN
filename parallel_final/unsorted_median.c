@@ -4,7 +4,6 @@
 #include <time.h>
 #include <float.h>
 #include "unsorted_median.h"
-#include "quicksort.h"
 
 
 /**

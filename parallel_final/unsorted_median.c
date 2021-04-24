@@ -235,8 +235,6 @@ double getKsmallest(double* vector, long k, long n_items)
 
     result = median(vector_cpy, n_items);
 
-    
-
     arraycpy(vector_cpy, vector, n_items);
 
     //printf("foo-3\n");

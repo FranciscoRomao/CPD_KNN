@@ -124,7 +124,7 @@ double median(double *vector, int n_items, int threads_available)
 
     if (threads_available > 1)
     {
-        #pragma omp parallel for if(n_items>100000)
+        #pragma omp parallel for if(n_items>1000)
         for(int i=0; i<full_splits; i++)
         {
             medians[i] = sorted_median(vector + 5*i, 5);

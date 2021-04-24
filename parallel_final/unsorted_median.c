@@ -124,7 +124,7 @@ double buildSet(double *setL, double *setR, int* counterL, int* counterR, double
  * @param   n_items   Number of items of the vector
  * @return  Median of the vector
  */
-double median(double *vector, int n_items)
+double median(double *vector, int n_items, int threads_available)
 {
     int full_splits = n_items/5;
     int semi_splits = n_items % 5;
@@ -135,32 +135,48 @@ double median(double *vector, int n_items)
     //fflush(stdout);
     
     //printArray(vector, 17);
-    //#pragma omp parallel for if(n_items>900000)//(n_items>250000)
-    for(int i=0; i<full_splits; i++)
+    if (threads_available > 1)
     {
-        medians[i] = sorted_median(vector + 5*i, 5);
-        //printf("Median do grupo %d: %lf\n", i, medians[i]);
+        #pragma omp taskloop if(n_items>10000)
+        for(int i=0; i<full_splits; i++)
+        {
+            medians[i] = sorted_median(vector + 5*i, 5);
+            //printf("Median do grupo %d: %lf\n", i, medians[i]);
+        }
+
+        if(semi_splits != 0)
+        {
+            medians[full_splits] = sorted_median(vector + 5*full_splits, semi_splits);
+            //printf("Median do semi grupo %d: %lf\n", i, medians[i]);
+        }
+
+        n_medians = full_splits + (semi_splits!=0 ? 1 : 0);
+
+        //printf("#_m - %d\n", n_medians);
+        //fflush(stdout);
+
+        //for(int i=0; i<n_items; i++)
+        //    printf("%lf ", vector[i]);
+
+        //printf("\n");
+        //printf("result - %lf\n", result);
+        //exit(-1);
+    }
+    else
+    {
+        for(int i=0; i<full_splits; i++)
+        {
+            medians[i] = sorted_median(vector + 5*i, 5);
+        }
+
+        if(semi_splits != 0)
+        {
+            medians[full_splits] = sorted_median(vector + 5*full_splits, semi_splits);
+        }
+
+        n_medians = full_splits + (semi_splits!=0 ? 1 : 0);
     }
     
-    
-    if(semi_splits != 0)
-    {
-        medians[full_splits] = sorted_median(vector + 5*full_splits, semi_splits);
-        //printf("Median do semi grupo %d: %lf\n", i, medians[i]);
-    }
-    
-    n_medians = full_splits + (semi_splits!=0 ? 1 : 0);
-
-    //printf("#_m - %d\n", n_medians);
-    //fflush(stdout);
-
-    //for(int i=0; i<n_items; i++)
-    //    printf("%lf ", vector[i]);
-    
-    //printf("\n");
-    //printf("result - %lf\n", result);
-    //exit(-1);
-
     if(n_medians <= 5)
     {
         result = sorted_median(medians, n_medians);
@@ -170,14 +186,12 @@ double median(double *vector, int n_items)
         return result;
     }
 
-    result = median(medians, full_splits + (semi_splits!=0 ? 1 : 0));
+    result = median(medians, full_splits + (semi_splits!=0 ? 1 : 0), threads_available);
     free(medians);
 
     //printf("Mediana das medianas: %lf\n", result);
 
     //result = buildSet(setL, setR, vector, n_items, result);
-
-    
 
     return result;
 }
@@ -209,7 +223,7 @@ double getSmallest(double *vector, int n_items)
  * @param   n_items Number of items of the array
  * @return  Value of the k smallest element
  */
-double getKsmallest(double* vector, long k, long n_items)
+double getKsmallest(double* vector, long k, long n_items,  int threads_available)
 {
     int L_items;
     int R_items;
@@ -233,7 +247,7 @@ double getKsmallest(double* vector, long k, long n_items)
     //printf("foo-1\n");
     //fflush(stdout);
 
-    result = median(vector_cpy, n_items);
+    result = median(vector_cpy, n_items, threads_available);
 
     arraycpy(vector_cpy, vector, n_items);
 
@@ -256,7 +270,7 @@ double getKsmallest(double* vector, long k, long n_items)
             arraycpy(vector_cpy, setL, L_items);
             //printf("foo-2\n");
             //fflush(stdout);
-            result = median(vector_cpy, L_items);
+            result = median(vector_cpy, L_items, threads_available);
             result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, L_items, result);
             //printf("Target idx: %d, result idx: %d\n", k, result_idx);
         }
@@ -268,7 +282,7 @@ double getKsmallest(double* vector, long k, long n_items)
                 k = k - result_idx;
                 //printf("foo-3 %d\n", result_idx);
                 //fflush(stdout);
-                result = median(vector_cpy, R_items);
+                result = median(vector_cpy, R_items, threads_available);
                 result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, R_items, result);
                 //printf("Target idx: %ld, result idx: %d\n", k, result_idx);
             }

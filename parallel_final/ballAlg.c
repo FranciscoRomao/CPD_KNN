@@ -68,7 +68,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
             double median_right; //immediatly bigger value than the median
 
             //compute median as the avergae of the two central pts
-            median_right = getKsmallest(projections, n_points/2 , n_points);
+            median_right = getKsmallest(projections, n_points/2 , n_points, threads_available);
             median_right_idx = find_idx_from_value(projections, n_points, median_right);
             median_left_idx = getLowerNeighborIdx(projections, n_points, median_right);
             median_left = projections[median_left_idx];
@@ -91,7 +91,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         else //odd n_pts -> median is the central value
         {
             //compute median
-            median = getKsmallest(projections, n_points/2, n_points);
+            median = getKsmallest(projections, n_points/2, n_points, threads_available);
             median_idx = find_idx_from_value(projections, n_points, median);
 
             //compute and set center of the node
@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();
     fprintf(stderr, "%.1lf\n", exec_time);
-    //dump_tree(tree, n_dims, n_points,n_nodes);
+    dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);

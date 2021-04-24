@@ -263,7 +263,6 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
             exit(-1);
         }
         
-
         for(int i = 0; i < omp_get_max_threads(); i++)
         {
             /* Opcao 2

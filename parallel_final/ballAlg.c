@@ -18,7 +18,8 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
 
     long center_idx; //indice of the center of the pts array where the split for the childs is made
     long lnode_id = node_idx + 1; //indice of the left child
-
+    long fapart_idx = 0;
+    
     tree[node_idx].L=lnode_id;
 
     tree[node_idx].center = (double *)malloc(n_dims * sizeof(double));
@@ -100,7 +101,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
  
             center_idx = (n_points - 1) / 2;
         }
-
+/*
         //compute the furthest point of the ball center and thus the radius
         radius_candidate[0] = distance(n_dims, pts[idx_fp[0]], tree[node_idx].center);
         radius_candidate[1] = distance(n_dims, pts[idx_fp[1]], tree[node_idx].center);
@@ -113,7 +114,9 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         {
             tree[node_idx].radius = radius_candidate[0];
         }
-
+*/
+	fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, tree[node_idx].center, threads_available);
+    	tree[node_idx].radius = distance(n_dims, pts[fapart_idx], tree[node_idx].center);
         long rnode_id = node_idx + 2 * center_idx;
         tree[node_idx].R = rnode_id;
 

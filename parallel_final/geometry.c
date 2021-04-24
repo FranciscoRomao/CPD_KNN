@@ -250,41 +250,41 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
     if(threads_available > 1)
     {
 
-        /*Opcao 2 (pode evitar false sharing)
+        //Opcao 2 (pode evitar false sharing)
             double **p_minus_a = (double**) malloc(sizeof(double*) * omp_get_max_threads());
-        */
+        
         
         // Opcao 1
-        double *pre_p_minus_a = (double *)malloc(n_dims * sizeof(double) * omp_get_max_threads());
-        double **p_minus_a = (double**) malloc(sizeof(double*) * omp_get_max_threads());
-        if (p_minus_a == NULL || pre_p_minus_a == NULL)
+       // double *pre_p_minus_a = (double *)malloc(n_dims * sizeof(double) * omp_get_max_threads());
+        //double **p_minus_a = (double**) malloc(sizeof(double*) * omp_get_max_threads());
+       /* if (p_minus_a == NULL || pre_p_minus_a == NULL)
         {
             printf("Problema no alloc de pre_p_minus_a ou p_minus_a");
             exit(-1);
-        }
+        }*/
         
         for(int i = 0; i < omp_get_max_threads(); i++)
         {
-            /* Opcao 2
+            // Opcao 2
             p_minus_a[i] = (double *)malloc(n_dims * sizeof(double));
-            */
+            
             // Opcao 1
-            p_minus_a[i] = &pre_p_minus_a[i * n_dims];
+            //p_minus_a[i] = &pre_p_minus_a[i * n_dims];
         }
 
-        #pragma omp taskloop
+        #pragma omp parallel for
         for (int i = 0; i < n_points; i++)
         {   
             projections[i] = orthogonal_projection_reduced(n_dims, pts[i], a, p_minus_a[omp_get_thread_num()%omp_get_max_threads()], b_minus_a);
         }
         
-        /* Opcao 2
+        // Opcao 2
         for(int i = 0; i < omp_get_max_threads(); i++)
             free(p_minus_a[i]);
-        */
+        
 
         //Opcao 1
-        free(pre_p_minus_a);
+       // free(pre_p_minus_a);
         free(p_minus_a);
     }
     else

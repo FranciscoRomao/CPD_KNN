@@ -100,7 +100,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
             compare_with_median(projections, pts, median, n_points);
             center_idx = (n_points - 1) / 2;
         }
-
+/*
         //compute the furthest point of the ball center and thus the radius
         radius_candidate[0] = distance(n_dims, pts[idx_fp[0]], tree[node_idx].center);
         radius_candidate[1] = distance(n_dims, pts[idx_fp[1]], tree[node_idx].center);
@@ -113,7 +113,10 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         {
             tree[node_idx].radius = radius_candidate[0];
         }            
-        
+*/
+
+	fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, tree[node_idx].center);
+    	tree[node_idx].radius = distance(n_dims, pts[fapart_idx], tree[node_idx].center);	
         // build child
         build_tree(tree, lnode_id, pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
         long rnode_id = node_idx + 2 * center_idx;

@@ -210,17 +210,7 @@ int main(int argc, char *argv[])
     exec_time = -omp_get_wtime(); 
     MPI_Init(&argc, &argv);
 
-    if(rank == 0)
-    {
-        //generates dataset
-        //-----------------Por enquanto vamos deixar só um proc receber os pontos e enviar para os outros
-        pts = get_points(argc, argv);
-    }
-
-    if(rank != 0)
-    {
-        MPI_Recv()
-    }
+    pts = get_points_mpi(argc, argv, MPI_COMM_WORLD);
     /*
         double* pts_first_position = pts[0]; //position of the first element of pts (pts is sorted so it would be lost and hard to free)
         int n_dims = atoi(argv[1]); //number of dimensions 
@@ -261,5 +251,4 @@ int main(int argc, char *argv[])
     free(pts[0]);
     free(pts);
     //fprintf(stderr, "%.1lf\n", exec_time);
-    */
 }

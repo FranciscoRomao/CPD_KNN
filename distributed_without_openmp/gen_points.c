@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <mpi.h>
 
 #define RANGE 10
+#define DEBUG 1
 
 extern void print_point(double *, int);
 
@@ -64,7 +66,7 @@ double **get_points(int argc, char *argv[])
 
 #ifdef DEBUG
     for (i = 0; i < np; i++)
-        print_point(pt_arr[i], n_dims);
+    //    print_point(pt_arr[i], n_dims);
 #endif
 
     return pt_arr;
@@ -135,16 +137,32 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm)
                 pt_arr[i][j] = RANGE * ((double)random()) / RAND_MAX;
             }
         }
+	np = last_split;
     }
 
     if(rank != 0)
     {
         MPI_Recv(pt_arr, full_split*n_dims, MPI_DOUBLE, 0, 0, comm, MPI_STATUS_IGNORE);
+    	np = full_split;
     }
 
     #ifdef DEBUG
-        for (i = 0; i < np; i++)
-            print_point(pt_arr[i], n_dims);
+    	printf("Rank: %d\n", rank);
+    	fflush(stdout);
+    	for (i = 0; i < np; i++)
+        {
+		printf("pt[%ld]: ", i);
+ 		fflush(stdout);
+		for(j = 0; j < n_dims; j++)
+		{
+			printf("%lf ", pt_arr[i][j]);
+			fflush(stdout);
+		}
+		printf("\n");
+		fflush(stdout);
+	}   
+
+	   // print_point(pt_arr[i], n_dims);
     #endif
 
     return pt_arr;

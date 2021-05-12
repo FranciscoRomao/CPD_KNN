@@ -64,10 +64,6 @@ double **get_points(int argc, char *argv[])
         for (j = 0; j < n_dims; j++)
             pt_arr[i][j] = RANGE * ((double)random()) / RAND_MAX;
 
-#ifdef DEBUG
-    for (i = 0; i < np; i++)
-    //    print_point(pt_arr[i], n_dims);
-#endif
 
     return pt_arr;
 }
@@ -83,15 +79,27 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm)
     long i;
     int j;
     int k;
-    int full_splits;
 
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &n_procs);
+    
+    n_dims = atoi(argv[1]);
+    if (n_dims < 2)
+    {
+        printf("Illegal number of dimensions (%d), must be above 1.\n", n_dims);
+        exit(2);
+    }
 
-    int full_split = np/n_procs;
-    int last_split = full_split + np%n_procs;
+    np = atol(argv[2]);
+    if (np < 1)
+    {
+        printf("Illegal number of points (%ld), must be above 0.\n", np);
+        exit(3);
+    }
 
-    pt_arr = (double **)create_array_pts(n_dims, last_split);
+    int full_split = (int) np/n_procs;
+    int last_split = (int) full_split + np%n_procs;
+    pt_arr = (double **)create_array_pts(n_dims, (long) last_split);
 
     if(rank==0)
     {
@@ -101,24 +109,10 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm)
             exit(1);
         }
 
-        n_dims = atoi(argv[1]);
-        if (n_dims < 2)
-        {
-            printf("Illegal number of dimensions (%d), must be above 1.\n", n_dims);
-            exit(2);
-        }
-
-        np = atol(argv[2]);
-        if (np < 1)
-        {
-            printf("Illegal number of points (%ld), must be above 0.\n", np);
-            exit(3);
-        }
-
         seed = atoi(argv[3]);
         srandom(seed);
         
-        for(k = 1; k<n_procs-1; k++)
+        for(k = 1; k<n_procs; k++)
         {
             for (i = 0; i<full_split; i++)
             {
@@ -127,7 +121,7 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm)
                     pt_arr[i][j] = RANGE * ((double)random()) / RAND_MAX;
                 }
             }
-            MPI_Send(pt_arr, full_split*n_dims, MPI_DOUBLE, k, 0, comm);
+            MPI_Send(&(pt_arr[0][0]), full_split*n_dims, MPI_DOUBLE, k, 0, comm);
         }
 
         for (i = 0; i<last_split; i++)
@@ -139,10 +133,9 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm)
         }
 	np = last_split;
     }
-
     if(rank != 0)
-    {
-        MPI_Recv(pt_arr, full_split*n_dims, MPI_DOUBLE, 0, 0, comm, MPI_STATUS_IGNORE);
+    {   
+        MPI_Recv(&(pt_arr[0][0]), full_split*n_dims, MPI_DOUBLE, 0, 0, comm, MPI_STATUS_IGNORE);
     	np = full_split;
     }
 
@@ -161,8 +154,6 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm)
 		printf("\n");
 		fflush(stdout);
 	}   
-
-	   // print_point(pt_arr[i], n_dims);
     #endif
 
     return pt_arr;

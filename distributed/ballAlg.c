@@ -236,6 +236,20 @@ void destroy_tree(long n_nodes, node* tree)
 
 int main(int argc, char *argv[])
 {   
+    MPI_Init(&argc, &argv); /*START MPI */
+    int my_rank, size, name_len;
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank); /*DETERMINE RANK OF THIS PROCESSOR*/
+    MPI_Comm_size(MPI_COMM_WORLD, &size); /*DETERMINE TOTAL NUMBER OF PROCESSORS*/
+  
+    MPI_Get_processor_name(processor_name, &name_len);
+
+    // Print off a hello world message
+    //printf("Hello world from processor %s, rank %d out of %d processors\n",
+    //       processor_name, my_rank, size);
+    //return 1;
+
+
     double exec_time;
     double **pts;
     node* tree;
@@ -274,4 +288,5 @@ int main(int argc, char *argv[])
     free(projections);
     free(pts_first_position);
     free(pts);
+    MPI_Finalize();
 }

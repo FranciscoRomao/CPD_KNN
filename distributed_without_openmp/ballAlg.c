@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
     free(projections);
     */
     //free(pts_first_position);
-    free(pts[0]);
-    free(pts);
+    //free(pts[0]);
+    //free(pts);
     //fprintf(stderr, "%.1lf\n", exec_time);
 }

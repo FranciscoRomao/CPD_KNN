@@ -55,11 +55,20 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         double median; //value of the median
         long fapart_idx; // indice of the point furthest apart from the center
         long idx_fp[2] = {0, 0}; // indices of the points furthest apart
-        double radius_candidate[2] = {0, 0 }; //possible radius 
+        double radius_candidate[2] = {0, 0 }; //possible radius
         
         //compute furthest apart points in the current set    
+        /** MPI_plan - master machine sends the coordinate of a point to all machines
+         *           - each machine computes the furthest point from and returns to master
+         *           - master says which of this points is the most further (pt a) and sends it to all machines
+         *           - each machine computes the furthest point from pt a and rets to master
+         *           - master who syas which is the furthest from a, being pt b
+        */  
         recursive_furthest_apart(n_dims, n_points, pts, idx_fp); 
         //pseudo-projection of all points (enough to know relative positions) 
+        /** MPI_plan - furthest pts are sent to all machines and the project the points 
+         * 
+        */
         project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
 
         if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
@@ -206,7 +215,13 @@ int main(int argc, char *argv[])
         //generates dataset
         //-----------------Por enquanto vamos deixar só um proc receber os pontos e enviar para os outros
         pts = get_points(argc, argv);
+    }
 
+    if(rank != 0)
+    {
+        MPI_Recv()
+    }
+    /*
         double* pts_first_position = pts[0]; //position of the first element of pts (pts is sorted so it would be lost and hard to free)
         int n_dims = atoi(argv[1]); //number of dimensions 
         long n_points = atoi(argv[2]); //number of points in the set
@@ -231,17 +246,20 @@ int main(int argc, char *argv[])
 
         build_tree(tree, 0, pts, projections, n_points, n_dims, Odd_Comm); 10
         build_tree(tree, 0, pts, projections, n_points, n_dims, Even_Comm); 10
-    }
+    }*/
 
     MPI_Finalize();
     //____________END_TIME_BENCHMARK_____________
+    /*
     exec_time += omp_get_wtime();
 
     dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
-    free(pts_first_position);
+    */
+    //free(pts_first_position);
+    free(pts[0]);
     free(pts);
-    fprintf(stderr, "%.1lf\n", exec_time);
-
+    //fprintf(stderr, "%.1lf\n", exec_time);
+    */
 }

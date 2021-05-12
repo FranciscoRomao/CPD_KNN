@@ -64,7 +64,7 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
 }
 
 
-/**
+/**CHANGE TO MPI
  * Computes the two points furthest apart in the set 
  * (might get local solution but it is not relevant for the problem)
  * @param n_dims   # of dimensions

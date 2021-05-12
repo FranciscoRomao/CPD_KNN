@@ -68,7 +68,7 @@ double **get_points(int argc, char *argv[])
     return pt_arr;
 }
 
-double **get_points_mpi(int argc, char *argv[], MPI_Comm comm)
+double **get_points_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_points)
 {
     double **pt_arr;
     unsigned seed;
@@ -138,6 +138,8 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm)
         MPI_Recv(&(pt_arr[0][0]), full_split*n_dims, MPI_DOUBLE, 0, 0, comm, MPI_STATUS_IGNORE);
     	np = full_split;
     }
+
+    *n_local_points=np;
 
     #ifdef DEBUG
     	printf("Rank: %d\n", rank);

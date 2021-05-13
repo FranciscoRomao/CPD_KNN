@@ -57,7 +57,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         double radius_candidate[2] = {0, 0 }; //possible radius 
         
         //compute furthest apart points in the current set    
-        recursive_furthest_apart(n_dims, n_points, pts, idx_fp); 
+        furthest_apart(n_dims, n_points, pts, idx_fp); 
         //pseudo-projection of all points (enough to know relative positions) 
         project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
 

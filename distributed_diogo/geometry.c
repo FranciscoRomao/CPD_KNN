@@ -52,31 +52,22 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
     double max_dist = -1, curr_dist = 0;
     long idx_newpt = 0;
 
+    //#pragma if(n_points==1000000) omp for reduction(max:max_dist) //if(n_points>250000)
     for (long i = 0; i < n_points; i++)
-    {
+    {   
+        if(n_points==1000000){
+            //printf("omp_get_num_threads(): %d\n",omp_get_num_threads());
+            //printf("omp_get_max_threads(): %d\n",omp_get_max_threads());
+            //printf("omp_get_thread_num(): %d\n",omp_get_thread_num());
+        }
         if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)
         {
             max_dist = curr_dist;
             idx_newpt = i;
         }
+        
     }
     return idx_newpt;
-}
-
-/**
- * Computes the two points furthest apart in the set in two g
- * (might get local solution but it is not relevant for the problem)
- * @param n_dims   # of dimensions
- * @param n_points # of points 
- * @param **pts array with the points
- * @param *idx_fp 
- */
-void furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp)
-{
-    idx_fp[0] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
-    idx_fp[1] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
-
-    return;
 }
 
 
@@ -214,6 +205,7 @@ void orthogonal_projection(int n_dims, double *p, double *a, double *b, double* 
     free(result_mult);
     return;
 }
+
 /**Given a list of points with multiple dimensions this function computes the reduced orthogonal projections
  * for all the points 
  * n_dims: # of dimensions
@@ -232,7 +224,9 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
         subtraction(n_dims, b, a, b_minus_a);
     else
         subtraction(n_dims, a, b, b_minus_a);
+    
 
+    //#pragma omp parallel for if(n_points>900000)//if(n_points>250000)
     for (int i = 0; i < n_points; i++)
     {   
         projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);

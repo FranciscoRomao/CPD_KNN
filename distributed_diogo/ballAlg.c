@@ -5,8 +5,8 @@
 #include "geometry.h"
 #include "unsorted_median.h"
 
-void build_tree(node* tree, long node_id, long local_start_id, double **pts, double* projections, long n_points, int n_dims)
-{
+void build_tree(node* tree, long node_id, long local_start_id, double **pts, double* projections, long n_points, int n_dims, MPI_Comm comm)
+{   
     long node_idx=node_id-n_local_nodes;
 
     if (n_points == 1) //if the node is a leaf
@@ -19,6 +19,8 @@ void build_tree(node* tree, long node_id, long local_start_id, double **pts, dou
         return;
     }
 
+    MPI_Comm above_comm;
+    MPI_Comm below_comm;
     long center_idx; //indice of the center of the pts array where the split for the childs is made
     long lnode_id = node_idx + 1; //indice of the left child
 
@@ -128,15 +130,15 @@ void build_tree(node* tree, long node_id, long local_start_id, double **pts, dou
         long rnode_id = node_idx + 2 * center_idx;
         tree[node_idx].R = rnode_id;
 
-        if(1)
-        {
-            #pragma omp task
-            {
-                build_tree(tree, lnode_id,local_start_id, pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
+        if(size_world)
+        {   
+            if(above_median){
+                MPI_Comm_split(comm, 1, 0, &above_comm);
+                build_tree(tree, lnode_id,local_start_id, pts, projections, center_idx, n_dims,above_comm); //center_idx happens to be the number of points in the set
             }
-            #pragma omp task
-            {
-                build_tree(tree, rnode_id, pts + center_idx,local_start_id, projections + center_idx, n_points - center_idx, n_dims);
+            if(!above_median){
+                MPI_Comm_split(comm, 1, 0, &below_comm);
+                build_tree(tree, rnode_id, pts + center_idx,local_start_id, projections + center_idx, n_points - center_idx, n_dims,below_comm);
             }
         }
         else
@@ -253,7 +255,7 @@ int main(int argc, char *argv[])
     // construct THE TREE
     if(rank==0)
     {
-        build_tree(tree,local_start_id,local_start_id, pts, projections, n_points, n_dims);
+        build_tree(tree,local_start_id,local_start_id, pts, projections, n_points, n_dims,MPI_COMM_WORLD);
     }
     else
     {

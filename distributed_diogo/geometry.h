@@ -6,6 +6,7 @@ typedef struct node {
     double * center;
     long L;
     long R;
+    long id;
 } node;
 
 double distance(int n_dims, double *a, double *b);

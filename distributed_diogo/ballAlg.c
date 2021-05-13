@@ -5,14 +5,17 @@
 #include "geometry.h"
 #include "unsorted_median.h"
 
-void build_tree(node* tree, long node_idx, double **pts, double* projections, long n_points, int n_dims)
+void build_tree(node* tree, long node_id, long local_start_id, double **pts, double* projections, long n_points, int n_dims)
 {
+    long node_idx=node_id-n_local_nodes;
+
     if (n_points == 1) //if the node is a leaf
     {
         tree[node_idx].R = -1;
         tree[node_idx].L = -1;
         tree[node_idx].radius = 0;
         tree[node_idx].center = pts[0];
+        tree[node_idx].id=id;
         return;
     }
 
@@ -41,10 +44,10 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         //both points are equidistant to the center
         tree[node_idx].radius = distance(n_dims, pts[0], tree[node_idx].center);
         //build leafs
-        build_tree(tree, lnode_id, pts, NULL, 1, n_dims); //center_idx happens to be the number of points in the set
+        build_tree(tree, lnode_id,local_start_id, pts, NULL, 1, n_dims); //center_idx happens to be the number of points in the set
         long rnode_id = node_idx + 2 * center_idx;
         tree[node_idx].R = rnode_id;
-        build_tree(tree, rnode_id, pts+1, NULL, 1, n_dims);
+        build_tree(tree, rnode_id,local_start_id,pts+1, NULL, 1, n_dims);
 
         return;
     }
@@ -52,15 +55,14 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
     {
         long median_idx; //indice of the median
         double median; //value of the median
-        long fapart_idx; // indice of the point furthest apart from the center
         long idx_fp[2] = {0, 0}; // indices of the points furthest apart
-        double radius_candidate[2] = {0, 0 }; //possible radius 
+        double radius_candidate[2] = {0, 0}; //possible radius
         
-        //compute furthest apart points in the current set    
+        //compute furthest apart points in the current set
         recursive_furthest_apart(n_dims, n_points, pts, idx_fp); 
         //pseudo-projection of all points (enough to know relative positions) 
         project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
-
+  
         if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
         {
             long median_left_idx; //indice of the immediatly smaller value than the median
@@ -91,16 +93,24 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
 
         }
         else //odd n_pts -> median is the central value
-        {   
+        {
             //compute median
             median = getKsmallest(projections, n_points/2, n_points);
+            //printf("foo1\n");
+            fflush(stdout);
             median_idx = find_idx_from_value(projections, n_points, median);
+            //printf("foo2\n");
+            fflush(stdout);
             //compute and set center of the node
             orthogonal_projection(n_dims, pts[median_idx], pts[idx_fp[0]], pts[idx_fp[1]], tree[node_idx].center);
+            //printf("foo3\n");
+            fflush(stdout);
             compare_with_median(projections, pts, median, n_points);
+            //printf("foo4\n");
+            fflush(stdout);
             center_idx = (n_points - 1) / 2;
         }
-/*
+
         //compute the furthest point of the ball center and thus the radius
         radius_candidate[0] = distance(n_dims, pts[idx_fp[0]], tree[node_idx].center);
         radius_candidate[1] = distance(n_dims, pts[idx_fp[1]], tree[node_idx].center);
@@ -112,17 +122,29 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
         else 
         {
             tree[node_idx].radius = radius_candidate[0];
-        }            
-*/
+        }
 
-	fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, tree[node_idx].center);
-    	tree[node_idx].radius = distance(n_dims, pts[fapart_idx], tree[node_idx].center);	
-        // build child
-        build_tree(tree, lnode_id, pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
+      
         long rnode_id = node_idx + 2 * center_idx;
         tree[node_idx].R = rnode_id;
-        build_tree(tree, rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims);
 
+        if(1)
+        {
+            #pragma omp task
+            {
+                build_tree(tree, lnode_id,local_start_id, pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
+            }
+            #pragma omp task
+            {
+                build_tree(tree, rnode_id, pts + center_idx,local_start_id, projections + center_idx, n_points - center_idx, n_dims);
+            }
+        }
+        else
+        {   
+            build_tree(tree, lnode_id, local_start_id,pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
+            build_tree(tree, rnode_id, local_start_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims);
+        }
+            
         return;
     } 
 }
@@ -189,32 +211,59 @@ void destroy_tree(long n_nodes, node* tree)
     free(tree);
 }
 
-int main(int argc, char *argv[])
+void init_tree(node* tree,long n_nodes)
 {
+    for(long i=0;i<n_nodes;i++)
+    {   
+        if(tree[i].L!=-1)
+            free(tree[i].center);
+    }
+    free(tree);
+}
+
+int main(int argc, char *argv[])
+{   
+    MPI_Init(&argc, &argv); /*START MPI */
+    int my_rank, size, name_len;
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank); /*DETERMINE RANK OF THIS PROCESSOR*/
+    MPI_Comm_size(MPI_COMM_WORLD, &size); /*DETERMINE TOTAL NUMBER OF PROCESSORS*/
+    MPI_Get_processor_name(processor_name, &name_len);
+
     double exec_time;
     double **pts;
     node* tree;
 
     //____________START_TIME_BENCHMARK_____________ 
-    exec_time = -omp_get_wtime(); 
-
+    exec_time = -omp_get_wtime();
     //generates dataset
     pts = get_points(argc, argv);
 
+
     double* pts_first_position = pts[0]; //position of the first element of pts (pts is sorted so it would be lost and hard to free)
-    int n_dims = atoi(argv[1]); //number of dimensions 
+    int n_dims = atoi(argv[1]); //number of dimensions
     long n_points = atoi(argv[2]); //number of points in the set
-    double* projections = (double*)malloc(n_points*sizeof(double)); //array to store pseudo-projections the locate the point in the line 
-    long n_nodes = 2 * n_points - 1; //number of nodes in the tree 
-    tree = (node*)malloc(n_nodes*sizeof(node));
+    double* projections = (double*)malloc(n_local_points*sizeof(double)); //array to store pseudo-projections the locate the point in the line 
+    long n_nodes = 2 * n_points - 1; //number of nodes in the tree
+    long n_local_nodes = 2*(n_points/size+size);
+    tree = (node*)malloc(n_local_nodes*sizeof(node));
+    init_tree(tree,n_local_nodes);
+    long local_start_id= rank*n_local_nodes;
     
     // construct THE TREE
-    build_tree(tree, 0, pts, projections, n_points, n_dims);
+    if(rank==0)
+    {
+        build_tree(tree,local_start_id,local_start_id, pts, projections, n_points, n_dims);
+    }
+    else
+    {
+        MPI_Recv(&i, 1, MPI_INT, id-1, 0, MPI_COMM_WORLD, &status);
+    }
 
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();
 
-    dump_tree(tree, n_dims, n_points,n_nodes);
+    //dump_tree(tree, n_dims, n_points,n_nodes);
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);

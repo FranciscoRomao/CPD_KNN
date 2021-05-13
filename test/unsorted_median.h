@@ -18,5 +18,9 @@ double getKsmallest(double* vector, long k, long n_items);
 long find_idx_from_value(double * projections, long n_points, double value);
 void compare_with_median (double* projections, double** pts, double median, long n_points);
 long getLowerNeighborIdx(double* vector, long n_items, double result);
+double* linerize(double** matrix, int nx, int ny);
+double getIntervalSet(double *interval, int* counter, double *vector, int n_items, double comparatorL, double comparatorR);
+void appendArray(double* dest, int begin_idx, double* source, int n_elem);
+
 
 #endif

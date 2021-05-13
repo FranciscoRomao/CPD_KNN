@@ -129,8 +129,9 @@ void build_tree(node* tree, long node_id, long local_start_id, double **pts, dou
       
         long rnode_id = node_idx + 2 * center_idx;
         tree[node_idx].R = rnode_id;
+        int size_world= MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-        if(size_world)
+        if(size_world>2)
         {   
             if(above_median){
                 MPI_Comm_split(comm, 1, 0, &above_comm);

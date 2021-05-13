@@ -64,7 +64,7 @@ void build_tree(node* tree, long node_idx, double **pts, double* projections, lo
          *           - each machine computes the furthest point from pt a and rets to master
          *           - master who syas which is the furthest from a, being pt b
         */  
-        recursive_furthest_apart(n_dims, n_points, pts, idx_fp); 
+        recursive_furthest_apart(n_dims, n_points, pts, idx_fp);
         //pseudo-projection of all points (enough to know relative positions) 
         /** MPI_plan - furthest pts are sent to all machines and the project the points 
          * 

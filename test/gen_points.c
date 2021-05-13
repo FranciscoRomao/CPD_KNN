@@ -3,7 +3,7 @@
 #include <mpi.h>
 
 #define RANGE 10
-#define DEBUG 1
+//#define DEBUG
 
 extern void print_point(double *, int);
 
@@ -98,32 +98,29 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_poi
     }
 
     int full_split = (int) np/n_procs;
+    double lixo;
     int last_split = (int) full_split + np%n_procs;
     pt_arr = (double **)create_array_pts(n_dims, (long) last_split);
 
-    if(rank==0)
+    seed = atoi(argv[3]);
+    srandom(seed);
+    
+    if (argc != 4 && rank == 0)
     {
-        if (argc != 4)
-        {
-            printf("Usage: %s <n_dims> <n_points> <seed>\n", argv[0]);
-            exit(1);
-        }
+        printf("Usage: %s <n_dims> <n_points> <seed>\n", argv[0]);
+        exit(1);
+    }
 
-        seed = atoi(argv[3]);
-        srandom(seed);
-        
-        for(k = 1; k<n_procs; k++)
+    if(rank == n_procs-1) //O ultimo vai ficar com um conjunto completo mais o resto
+    {
+        for (i = 0; i<rank*full_split; i++)
         {
-            for (i = 0; i<full_split; i++)
+            for (j = 0; j<n_dims; j++)
             {
-                for (j = 0; j<n_dims; j++)
-                {
-                    pt_arr[i][j] = RANGE * ((double)random()) / RAND_MAX;
-                }
+                lixo = (double)random();
             }
-            MPI_Send(&(pt_arr[0][0]), full_split*n_dims, MPI_DOUBLE, k, 0, comm);
+            fflush(stdout);
         }
-
         for (i = 0; i<last_split; i++)
         {
             for (j = 0; j<n_dims; j++)
@@ -131,12 +128,26 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_poi
                 pt_arr[i][j] = RANGE * ((double)random()) / RAND_MAX;
             }
         }
-	np = last_split;
+	       np = last_split;
     }
-    if(rank != 0)
-    {   
-        MPI_Recv(&(pt_arr[0][0]), full_split*n_dims, MPI_DOUBLE, 0, 0, comm, MPI_STATUS_IGNORE);
-    	np = full_split;
+    else
+    {
+        for (i = 0; i<rank*full_split; i++)
+        {
+            for (j = 0; j<n_dims; j++)
+            {
+                lixo = (double)random();
+            }
+        }
+        
+        for (i = 0; i<full_split; i++)
+        {
+            for (j = 0; j<n_dims; j++)
+            {
+                pt_arr[i][j] = RANGE * ((double)random()) / RAND_MAX;
+            }
+        }
+	    np = full_split;
     }
 
     *n_local_points=np;
@@ -155,7 +166,83 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_poi
 		}
 		printf(" from rank %d\n", rank);
 		fflush(stdout);
-	}   
+	}  
+    #endif
+
+    return pt_arr;
+}
+
+double* get_points_1dim_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_points)
+{
+    unsigned seed;
+    int rank;
+    int n_procs;
+    int n_dims;
+    long np;
+    long i;
+    int j;
+    int k;
+
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &n_procs);
+    
+    n_dims = atoi(argv[1]);
+    np = atol(argv[2]);
+
+    int full_split = (int) np/n_procs;
+    double lixo;
+    int last_split = (int) full_split + np%n_procs;
+
+    double* pt_arr = (double *)malloc(last_split*sizeof(double));
+
+    seed = atoi(argv[3]);
+    srandom(seed);
+    
+    if (argc != 4 && rank == 0)
+    {
+        printf("Usage: %s <n_dims> <n_points> <seed>\n", argv[0]);
+        exit(1);
+    }
+
+    //printf("full: %d, last: %d", full_split, last_split);
+
+    if(rank == n_procs-1) //O ultimo vai ficar com um conjunto completo mais o resto
+    {
+        for (i = 0; i<rank*full_split; i++)
+        {
+            lixo = (double)random();
+        }
+
+        for (i = 0; i<last_split; i++)
+        {
+            pt_arr[i] = RANGE * ((double)random()) / RAND_MAX;
+        }
+	    np = last_split;
+    }
+    else
+    {
+        for (i = 0; i<rank*full_split; i++)
+        {
+            lixo = (double)random();
+        }
+        
+        for (i = 0; i<full_split; i++)
+        {
+            pt_arr[i] = RANGE * ((double)random()) / RAND_MAX;
+        }
+	    np = full_split;
+    }
+
+    *n_local_points=np;
+
+    #ifdef DEBUG
+    for (i = 0; i < np; i++)
+    {
+        printf("pt[%ld]: ", i);
+        printf("%lf ", pt_arr[i]);
+	    printf(" from rank %d\n", rank);
+	    fflush(stdout);
+	}  
     #endif
 
     return pt_arr;

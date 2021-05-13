@@ -6,6 +6,8 @@
 #include <mpi.h>
 #include "unsorted_median.h"
 
+#define SAMPLE 3
+
 /**
  * Compare function used inside quicksort
  * @param   a   First number to compare
@@ -179,84 +181,108 @@ double getSmallest(double *vector, int n_items)
     return min;
 }
 
-
-/**
- * Finds the k smallest element of a vector
- * @param   vector  Vector to find the median of
- * @param   k   Element indice (counting from 0) to be found
- * @param   n_items Number of items of the array
- * @return  Value of the k smallest element
- */
-double getKsmallest(double* vector, long k, long n_items)
+int vectorSum(int* vector, int n)
 {
-    int L_items;
-    int R_items;
+    int count=0;
+
+    for(int i=0; i<n; i++)
+    {
+        count += vector[i];
+    }
+    return count;
+}
+
+double PSRS(double* vector, long k, long n_items)
+{
     int rank;
-    int n_procs;
-    double result;
-    int result_idx;
-    double *setL = (double *)malloc(n_items * sizeof(double));
-    double *setR = (double *)malloc(n_items * sizeof(double));
-    double *vector_cpy = (double *)malloc(n_items * sizeof(double));
-    int* recvValues;
+    int n_points;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
     
-    arraycpy(vector_cpy, vector, n_items);
+    //double *vector_cpy = (double *)malloc(n_items * sizeof(double));
+    double* sample = (double *)malloc(SAMPLE * sizeof(double));
+    double* recvValues;
+    double* partitions_limits;
+    int result_idx;
+    double** partitions2send = (double**)create_array_pts(n_points, n_procs);
+    double** partitions2recv = (double**)create_array_pts(n_points, n_procs);
+    double* newVector = (double*)malloc(sizeof(double)*2*n_points); //_--------------------------Não sei bem que dimensão colocar aqui
+    int elems_recvd;
+    
+    MPI_Request* requests = (MPI_Request*)malloc(sizeof(MPI_Request)*n_procs);
+    int n_elem;
+    int n_to_recv;
+    int i;
+
+    
+    //arraycpy(vector_cpy, vector, n_items);
     
     //printArray(vector, n_items);
 
-    if(rank == 0)
+    if(!rank)
     {
-        result = median(vector_cpy, n_items);
-        recvValues = malloc(n_procs * sizeof(int));
+        recvValues = malloc(n_procs*SAMPLE*sizeof(int));
     }
 
-    MPI_Bcast(&result, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    //printf("Rank: %d, received: %lf\n", rank, result);
-    result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, n_items, result);
-    
-    MPI_Gather(&result_idx, 1, MPI_INT, recvValues, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    printf("Rank: %d, value_on_left:%d\n", rank, result_idx);
-    
-
-    return 0;
-    arraycpy(vector_cpy, vector, n_items);
-
-
-    //printf("Target idx: %d, result idx: %d\n", k, result_idx);
-
-    while(k > result_idx || k < result_idx)
+    for(i=0; i<SAMPLE; i++)
     {
-        if(k < result_idx)
-        {
-            arraycpy(vector_cpy, setL, L_items);
+        sample[i] = getKsmallest(vector, (n_items/3)*i, n_items);
+    }
 
-            result = median(vector_cpy, L_items);
-            result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, L_items, result);
-            //printf("Target idx: %d, result idx: %d\n", k, result_idx);
+    MPI_Gather(sample, 3, MPI_DOUBLE, recvValues, 3, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    if(!rank)
+    {
+        linerize((double**)recvValues, n_procs, SAMPLE, recvValues);
+
+        partitions_limits = (double*)malloc(sizeof(double)*n_procs);
+
+        for(i=0; i<n_procs-1; i++)//porque o ultimo elemente é o ultimo elemento não precisa de ser enviado
+        {
+            partitions_limits[i] = getKsmallest(recvValues, SAMPLE*i, n_procs*SAMPLE); //cada processador enviou uma SAMPLE
         }
+    }
 
-        if(k > result_idx)
+    MPI_Bcast(&partitions_limits, n_procs-1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    for(i=0; i<n_procs-1; i++)
+    {
+        if(i==0)
         {
-            arraycpy(vector_cpy, setR, R_items);
+            if(i==rank)
             {
-                k = k - result_idx;
-                result = median(vector_cpy, R_items);
-                result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, R_items, result);
-                //printf("Target idx: %d, result idx: %d\n", k, result_idx);
+                result_idx = getIntervalSet(partitions2recv[i], &n_elem, vector, n_items, 0, partitions_limits[i]);
+                continue;
             }
+            result_idx = getIntervalSet(partitions[i], &n_elem, vector, n_items, 0, partitions_limits[i]);
+            //MPI_Send(partitions[i], n_elem, MPI_DOUBLE, i, i, MPI_COMM_WORLD);
+            MPI_Isend(&n_elem, 1, MPI_INT, i, i, MPI_COMM_WORLD, &(requests[i]));
+            MPI_Isend(partitions[i], n_elem, MPI_DOUBLE, i, i, MPI_COMM_WORLD, &(requests[i]));
+        }
+        else  
+        {
+            if(i==rank)
+            {
+                result_idx = getIntervalSet(partitions2recv[i], &n_elem, vector, n_items, 0, partitions_limits[i]);
+                continue;
+            }
+            result_idx = getIntervalSet(partitions[i], &n_elem, vector, n_items, partitions_limits[i-1], partitions_limits[i]);
+            MPI_Isend(&n_elem, 1, MPI_INT, i, i, MPI_COMM_WORLD, &(requests[i]));
+            MPI_Isend(partitions[i], n_elem, MPI_DOUBLE, i, i, MPI_COMM_WORLD, &(requests[i]));
         }
     }
-
-    result = getSmallest(setR, R_items);
-    free(vector_cpy);
-    free(setL);
-    free(setR);
     
+    for(i=0; i<n_procs-1; i++)
+    {
+        elems_recvd = 0;
+        MPI_Recv(&n_to_recv, 1, MPI_INT, i, rank, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(partitions2recv[i], n_to_recv , MPI_DOUBLE, i, rank, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        appendArray(newVector, elems_recvd, partitions2recv[i], n_to_recv);
+    }
+
+    //O algoritmo está implementado agora falta calcular a median e que processadores vão para um lado e para o outro
+    //------------------------------------------------------------
     return result;
 }
 
@@ -316,7 +342,7 @@ long getLowerNeighborIdx(double* vector, long n_items, double result)
  * @param   median      Median to use to separate the projections vector
  * @param   n_points    Number of elements on the array
  */
-void compare_with_median (double* projections, double** pts, double median, long n_points)
+void compare_with_median(double* projections, double** pts, double median, long n_points)
 {
     long left_pivot = 0;
     long right_pivot = n_points -1;
@@ -382,4 +408,94 @@ long find_idx_from_value(double *projections, long n_points, double value)
             return i;
     }
     return -1;
+}
+
+double getKsmallest(double* vector, long k, long n_items)
+{
+    int L_items;
+    int R_items;
+    double result;
+    int result_idx;
+    double *setL = (double *)malloc(n_items * sizeof(double));
+    double *setR = (double *)malloc(n_items * sizeof(double));
+    double *vector_cpy = (double *)malloc(n_items * sizeof(double));
+    
+    arraycpy(vector_cpy, vector, n_items);
+    
+    //printArray(vector, n_items);
+
+    result = median(vector_cpy, n_items);
+
+    arraycpy(vector_cpy, vector, n_items);
+
+    result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, n_items, result);
+
+    //printf("Target idx: %d, result idx: %d\n", k, result_idx);
+
+    while(k > result_idx || k < result_idx)
+    {
+        if(k < result_idx)
+        {
+            arraycpy(vector_cpy, setL, L_items);
+
+            result = median(vector_cpy, L_items);
+            result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, L_items, result);
+            //printf("Target idx: %d, result idx: %d\n", k, result_idx);
+        }
+
+        if(k > result_idx)
+        {
+            arraycpy(vector_cpy, setR, R_items);
+            {
+                k = k - result_idx;
+                result = median(vector_cpy, R_items);
+                result_idx = buildSet(setL, setR, &L_items, &R_items, vector_cpy, R_items, result);
+                //printf("Target idx: %d, result idx: %d\n", k, result_idx);
+            }
+        }
+    }
+
+    result = getSmallest(setR, R_items);
+    free(vector_cpy);
+    free(setL);
+    free(setR);
+    
+    return result;
+}
+
+double* linerize(double** matrix, int nx, int ny, double* vector)//x é o numero de vetores na matrix e y é o numero de elementos dentro do vetor
+{
+    for(int i=0; i<nx; i++)
+    {
+        for(int j=0; j<ny; j++)
+        {
+            vetor[i*nx+j] = matrix[i][j];
+        }
+    }
+}
+
+double getIntervalSet(double *interval, int* counter, double *vector, int n_items, double comparatorL, double comparatorR)
+{
+    *counter=0;
+
+    for(int i=0; i<n_items; i++)
+    {
+        //printArray(setL, *counterL);
+        if(vector[i]>comparatorL && vector[i]<=comparatorR)
+        {
+            (*counterL)++;
+            setL[(*counterL)-1] = vector[i];
+        }
+    }
+    //printArray(setL, *counterL);
+    //printf("Sets criados: setL %d items, setR %d items, idx da mediana: %d\n\n", *counterL, *counterR, (*counterL));
+    return (*counterL);
+}
+
+void appendArray(double* dest, int begin_idx, double* source, int n_elem)
+{
+    for(int i=0; i<n_elem; i++)
+    {
+        dest[i+begin_idx] = source[i];
+    }
 }

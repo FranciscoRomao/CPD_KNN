@@ -1,3 +1,4 @@
+#include <mpi.h>
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,8 +8,14 @@
 
 void build_tree(node* tree, long node_id, long local_start_id, double **pts, double* projections, long n_points, int n_dims, MPI_Comm comm, int rank)
 {   
+    long lnode_id;
+    long rnode_id;
+    long center_idx; //indice of the center of the pts array where the split for the childs is made
+    MPI_Comm above_comm;
+    MPI_Comm below_comm;
+    
     if(rank==0){
-        long node_idx=node_id-n_local_nodes;
+        long node_idx=node_id;
 
         if (n_points == 1) //if the node is a leaf
         {
@@ -16,14 +23,12 @@ void build_tree(node* tree, long node_id, long local_start_id, double **pts, dou
             tree[node_idx].L = -1;
             tree[node_idx].radius = 0;
             tree[node_idx].center = pts[0];
-            tree[node_idx].id=id;
+            tree[node_idx].id=node_id;
             return;
         }
 
-        MPI_Comm above_comm;
-        MPI_Comm below_comm;
-        long center_idx; //indice of the center of the pts array where the split for the childs is made
-        long lnode_id = node_idx + 1; //indice of the left child
+       
+        lnode_id = node_id + 1; //indice of the left child
 
         tree[node_idx].L=lnode_id;
 
@@ -47,10 +52,10 @@ void build_tree(node* tree, long node_id, long local_start_id, double **pts, dou
             //both points are equidistant to the center
             tree[node_idx].radius = distance(n_dims, pts[0], tree[node_idx].center);
             //build leafs
-            build_tree(tree, lnode_id,local_start_id, pts, NULL, 1, n_dims); //center_idx happens to be the number of points in the set
-            long rnode_id = node_idx + 2 * center_idx;
+            build_tree(tree, lnode_id,local_start_id, pts, NULL, 1, n_dims,comm,rank); //center_idx happens to be the number of points in the set
+            rnode_id = node_id + 2 * center_idx;
             tree[node_idx].R = rnode_id;
-            build_tree(tree, rnode_id,local_start_id,pts+1, NULL, 1, n_dims);
+            build_tree(tree, rnode_id,local_start_id,pts+1, NULL, 1, n_dims,comm,rank);
 
             return;
         }
@@ -126,31 +131,39 @@ void build_tree(node* tree, long node_id, long local_start_id, double **pts, dou
             {
                 tree[node_idx].radius = radius_candidate[0];
             }
+            rnode_id = node_id + 2 * center_idx;
+            tree[node_idx].R = rnode_id;
         }
     }
-      
-        long rnode_id = node_idx + 2 * center_idx;
-        tree[node_idx].R = rnode_id;
-        int size_world= MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-        if(size_world>2)
+    
+    int size_world;
+    MPI_Comm_size(MPI_COMM_WORLD, &size_world);
+    if(size_world>2)
+    {   
+        MPI_Comm above_comm;
+        MPI_Comm below_comm;
+        int above_median=(((double)rank/size_world)>0.5)?1:0;
+        int new_rank;  
+        if(above_median)
         {   
-            if(above_median)
-            {
-                build_tree(tree, lnode_id,local_start_id, pts, projections, center_idx, n_dims,above_comm,new_rank); //center_idx happens to be the number of points in the set
-            }
-            else
-            {
-                build_tree(tree, rnode_id, pts + center_idx,local_start_id, projections + center_idx, n_points - center_idx, n_dims,below_comm,new_rank);
-            }
+            MPI_Comm_split(comm, 0, 0, &above_comm);
+            MPI_Comm_rank(comm, &new_rank);
+            build_tree(tree, lnode_id,local_start_id, pts, projections, center_idx, n_dims,above_comm,new_rank); //center_idx happens to be the number of points in the set
         }
         else
         {   
-            build_tree(tree, lnode_id, local_start_id,pts, projections, center_idx, n_dims); //center_idx happens to be the number of points in the set
-            build_tree(tree, rnode_id, local_start_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims);
+            MPI_Comm_split(comm, 1, 0, &below_comm);
+            MPI_Comm_rank(comm, &new_rank);
+            build_tree(tree, rnode_id, local_start_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,below_comm,new_rank);
         }
-            
-        return;
+    }
+    else
+    {   
+        build_tree(tree, lnode_id, local_start_id,pts, projections, center_idx, n_dims,comm,rank); //center_idx happens to be the number of points in the set
+        build_tree(tree, rnode_id, local_start_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,comm,rank);
+    }
+        
+    return;
      
 }
 
@@ -229,9 +242,9 @@ void init_tree(node* tree,long n_nodes)
 int main(int argc, char *argv[])
 {   
     MPI_Init(&argc, &argv); /*START MPI */
-    int my_rank, size, name_len;
+    int rank, size, name_len;
     char processor_name[MPI_MAX_PROCESSOR_NAME];
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank); /*DETERMINE RANK OF THIS PROCESSOR*/
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank); /*DETERMINE RANK OF THIS PROCESSOR*/
     MPI_Comm_size(MPI_COMM_WORLD, &size); /*DETERMINE TOTAL NUMBER OF PROCESSORS*/
     MPI_Get_processor_name(processor_name, &name_len);
 
@@ -243,22 +256,20 @@ int main(int argc, char *argv[])
     exec_time = -omp_get_wtime();
     //generates dataset
     pts = get_points(argc, argv);
+    double* pts_first_position = pts[0];
 
-
-    double* pts_first_position = pts[0]; //position of the first element of pts (pts is sorted so it would be lost and hard to free)
     int n_dims = atoi(argv[1]); //number of dimensions
     long n_points = atoi(argv[2]); //number of points in the set
-    double* projections = (double*)malloc(n_local_points*sizeof(double)); //array to store pseudo-projections the locate the point in the line 
+    double* projections = (double*)malloc(n_points*sizeof(double)); //array to store pseudo-projections the locate the point in the line 
     long n_nodes = 2 * n_points - 1; //number of nodes in the tree
-    long n_local_nodes = 2*(n_points/size+size);
-    tree = (node*)malloc(n_local_nodes*sizeof(node));
-    init_tree(tree,n_local_nodes);
-    long local_start_id= rank*n_local_nodes;
+    tree = (node*)malloc(n_nodes*sizeof(node));
+    init_tree(tree,n_nodes);
     
     // construct THE TREE
-    build_tree(tree,local_start_id,local_start_id, pts, projections, n_points, n_dims,MPI_COMM_WORLD);
+    long n_local_nodes = 2*(n_points/size+size);
+    long local_start_id= rank*n_local_nodes;
+    build_tree(tree,0,local_start_id, pts, projections, n_points, n_dims,MPI_COMM_WORLD,rank);
     
-
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();
 

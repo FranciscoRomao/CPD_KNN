@@ -1,3 +1,4 @@
+#include <mpi.h>
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,7 +6,7 @@
 #include "geometry.h"
 #include "unsorted_median.h"
 
-void build_tree(node* tree, long node_id, long local_start_id, double **pts, double* projections, long n_points, int n_dims, MPI_Comm comm, int rank)
+void build_tree(node* tree, long node_id, long local_start_id, double **pts, double* projections, long n_points, int n_dims, MPI_COMM comm, int rank)
 {   
     long node_idx=node_id-n_local_nodes;
     if(rank==0){
@@ -125,15 +126,15 @@ void build_tree(node* tree, long node_id, long local_start_id, double **pts, dou
                 {
                     tree[node_idx].radius = radius_candidate[0];
                 }
-
-            
                 long rnode_id = node_idx + 2 * center_idx;
                 tree[node_idx].R = rnode_id;
         }
         else{
             quicksort()
         }
-        int size_world= MPI_Comm_size(MPI_COMM_WORLD, &size);
+        int size_world;
+        MPI_Comm_size(MPI_COMM_WORLD, &size_world);
+        
         int new_rank;
         if(size_world>2)
         {   

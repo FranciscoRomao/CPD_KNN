@@ -27,7 +27,7 @@ void build_tree(node* tree, long node_id, long local_start_id, double **pts, dou
             return;
         }
 
-       
+        tree[node_idx].id=node_id;
         lnode_id = node_id + 1; //indice of the left child
 
         tree[node_idx].L=lnode_id;

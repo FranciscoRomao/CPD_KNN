@@ -8,7 +8,6 @@
 
 void build_tree(node* tree, long node_id, long local_start_id, double **pts, double* projections, long n_points, int n_dims, MPI_COMM comm, int rank)
 {   
-    long node_idx=node_id-n_local_nodes;
     if(rank==0){
             if (n_points == 1) //if the node is a leaf
             {

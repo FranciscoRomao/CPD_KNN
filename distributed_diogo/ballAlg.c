@@ -25,6 +25,19 @@ void my_print(char* name, int x){
     }
 }
 
+void print_pjs(double* pjs, long n_pts){
+    for(long i=0;i<n_pts;i++){
+        printf("%lf ",pjs[i]);
+    }
+}
+
+void print_pts(double** pts, long n_pts, int n_dims){
+    for(long i=0;i<n_pts;i++){
+        for(int j=0;j<n_dims;j++)
+            printf("%lf ",pts[i][j]);
+    }
+}
+
 /**
  * Prints recursively all the nodes
  * @param node_id : id of the node
@@ -67,9 +80,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
     int my_len;
     //MPI_Get_processor_name(my_name, &my_len);
     //print_proc_name(my_name);
-    if (rank!=0 && n_points == 1) //if the node is a leaf
-        return;
-    if(rank!=0 && n_points==2)
+    if (rank!=0 && (n_points == 1 || n_points==2)) //if the node is a leaf
         return;
     node foo;
     if(rank==0){
@@ -96,13 +107,18 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
 
         if(n_points == 2) //only two points in the set -> easier/lesser operations
         {   
+            center_idx = 1;
+            rnode_id = node_id + 2 * center_idx;
+            foo.R = rnode_id;
+            printf("After comm:\n");
+            printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
+            print_pts(pts,n_points,n_dims);printf("\n");
+            print_pjs(projections,n_points);printf("\n");
             flag(100);
             double* aux;
-            printf("%x\n",pts);
+            printf("node_id:%ld pts[0][0]:%lf pts[1][0]:%lf\n\n",node_id,pts[0][0],pts[1][0]);
             if (pts[0][0] > pts[1][0]) //sort ascending if not already
             {   
-                printf("HERE\n");
-                fflush(stdout);
                 aux = pts[0];
                 pts[0] = pts[1];
                 pts[1] = aux;
@@ -113,18 +129,15 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             {
                 foo.center[i] = (pts[0][i] + pts[1][i]) / 2;
             }
-            center_idx = 1;
             flag(113);
             //both points are equidistant to the center
             foo.radius = distance(n_dims, pts[0], foo.center);
+            printf("radius:%lf\n",foo.radius);
             flag(115);
             //build leafs
             print_Node(foo,n_dims);
             build_tree(lnode_id, pts, NULL, 1, n_dims,comm,rank,start_npoints); //center_idx happens to be the number of points in the set
-            rnode_id = node_id + 2 * center_idx;
-            foo.R = rnode_id;
             build_tree(rnode_id,pts+1, NULL, 1, n_dims,comm,rank,start_npoints);
-
             return;
         }
         else // > 2 points in the set
@@ -207,39 +220,47 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
 
     int size_world;
     MPI_Comm_size(comm, &size_world);
-    printf("size_world:%d\n",size_world);
     if(size_world>=2)
     {   
-        MPI_Bcast(pts,start_npoints*n_dims,MPI_DOUBLE,0,comm);
-        MPI_Bcast(projections,start_npoints,MPI_DOUBLE,0,comm);
+        MPI_Bcast(&(pts[0][0]),start_npoints*n_dims,MPI_DOUBLE,0,comm);
+        MPI_Bcast(&(projections[0]),start_npoints,MPI_DOUBLE,0,comm);
         MPI_Bcast(&rnode_id,1,MPI_LONG,0,comm);
         MPI_Bcast(&lnode_id,1,MPI_LONG,0,comm);
         MPI_Bcast(&center_idx,1,MPI_LONG,0,comm);
         MPI_Bcast(&n_points,1,MPI_LONG,0,comm);
+        if(rank==0){
+        printf("Before comm:\n");
+        printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
+        print_pts(pts,n_points,n_dims);printf("\n");
+        print_pjs(projections,n_points);printf("\n");}
+
         MPI_Comm above_comm;
         MPI_Comm below_comm;
         int above_median=(((double)rank/size_world)>=0.5)?1:0;
-        printf("above median:%d rank:%d\n",above_median,rank);
-        int new_rank;  
+        //printf("above median:%d rank:%d\n",above_median,rank);
+        int new_rank;
         if(above_median)
         {   
-            MPI_Comm_split(comm, 0, 0, &above_comm);
-            MPI_Comm_rank(above_comm, &new_rank);
-            printf("NEW_RANK: %d above\n", new_rank);
-            build_tree(lnode_id, pts, projections, center_idx, n_dims,above_comm,new_rank,start_npoints); //center_idx happens to be the number of points in the set
+            MPI_Comm_split(comm, 0, 0, &below_comm);
+            MPI_Comm_rank(below_comm, &new_rank);
+            //printf("NEW_RANK: %d above\n", new_rank);
+            build_tree(lnode_id, pts, projections, center_idx, n_dims,below_comm,new_rank,start_npoints); //center_idx happens to be the number of points in the set
         }
         else
         {  
-            printf("splitting below!\n");
-            MPI_Comm_split(comm, 1, 0, &below_comm);
-            MPI_Comm_rank(below_comm, &new_rank);
-            printf("NEW_RANK: %d below\n", new_rank);
-            return;
-            build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,below_comm,new_rank,start_npoints);
+            //printf("splitting below!\n");
+            MPI_Comm_split(comm, 1, 0, &above_comm);
+            MPI_Comm_rank(above_comm, &new_rank);
+            //printf("NEW_RANK: %d below\n", new_rank);
+            build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,above_comm,new_rank,start_npoints);
         }
     }
     else
     {   
+        printf("Before comm:\n");
+        printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
+        print_pts(pts,n_points,n_dims);printf("\n");
+        print_pjs(projections,n_points);printf("\n");
         build_tree(lnode_id,pts, projections, center_idx, n_dims,comm,rank,start_npoints); //center_idx happens to be the number of points in the set
         build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,comm,rank,start_npoints);
     }

@@ -16,7 +16,7 @@ double median(double *vector, int n_items);
 double getSmallest(double *vector, int n_items);
 double getKsmallest(double* vector, long k, long n_items);
 long find_idx_from_value(double * projections, long n_points, double value);
-void compare_with_median (double* projections, double** pts, double median, long n_points);
+void compare_with_median (double* projections, double** pts, double median, long n_points, int n_dims);
 long getLowerNeighborIdx(double* vector, long n_items, double result);
 
 #endif

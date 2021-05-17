@@ -121,7 +121,7 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_poi
                     pt_arr[i][j] = RANGE * ((double)random()) / RAND_MAX;
                 }
             }
-            MPI_Send(&(pt_arr[0][0]), full_split*n_dims, MPI_DOUBLE, k, 0, comm);
+            MPI_Send(pt_arr[0], full_split*n_dims, MPI_DOUBLE, k, 0, comm);
         }
 
         for (i = 0; i<last_split; i++)
@@ -135,7 +135,7 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_poi
     }
     if(rank != 0)
     {   
-        MPI_Recv(&(pt_arr[0][0]), full_split*n_dims, MPI_DOUBLE, 0, 0, comm, MPI_STATUS_IGNORE);
+        MPI_Recv(pt_arr[0], full_split*n_dims, MPI_DOUBLE, 0, 0, comm, MPI_STATUS_IGNORE);
     	np = full_split;
     }
 

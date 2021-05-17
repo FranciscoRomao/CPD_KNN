@@ -302,6 +302,15 @@ long getLowerNeighborIdx(double* vector, long n_items, double result)
     return neighbor_idx;
 }
 
+void swap_points(double* source, double * target, int n_dims)
+{
+    double aux;
+    for(int i=0;i<n_dims;i++){
+        aux= source[i];
+        source[i]=target[i];
+        target[i]=aux;
+    }
+}
 
 /**
  * Reorders the vectors projections and *pts. The left set has all the points with values of the projections
@@ -312,7 +321,7 @@ long getLowerNeighborIdx(double* vector, long n_items, double result)
  * @param   median      Median to use to separate the projections vector
  * @param   n_points    Number of elements on the array
  */
-void compare_with_median (double* projections, double** pts, double median, long n_points)
+void compare_with_median (double* projections, double** pts, double median, long n_points, int n_dims)
 {
     long left_pivot = 0;
     long right_pivot = n_points -1;
@@ -328,9 +337,10 @@ void compare_with_median (double* projections, double** pts, double median, long
                 projections[right_pivot] = projections[left_pivot];
                 projections[left_pivot] = aux;
 
-                aux_pt = pts[right_pivot];
-                pts[right_pivot] = pts[left_pivot];
-                pts[left_pivot] = aux_pt;
+                swap_points(pts[right_pivot],pts[left_pivot],n_dims);
+                //aux_pt = pts[right_pivot];
+                //pts[right_pivot] = pts[left_pivot];
+                //pts[left_pivot] = aux_pt;
             } else {
                right_pivot--;
            }

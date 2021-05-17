@@ -326,5 +326,6 @@ int main(int argc, char *argv[])
     free(projections);
     free(pts_first_position);
     free(pts);
-    //MPI_Finalize();
+    MPI_Finalize();
+    return 0;
 }

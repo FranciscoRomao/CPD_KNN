@@ -8,10 +8,13 @@
 #include "unsorted_median.h"
 #include "gen_points.h"
 
+#define DEBUG 1
+
 #define IGNORE_NUM -1010101010
 #define SAMPLE 3
 
-int rank;
+int rank; //id of the current compute
+int n_procs; //number of porcessors/processors
 
 /**
  * Compare function used inside quicksort
@@ -196,230 +199,209 @@ int vectorSum(int* vector, int n)
     }
     return count;
 }
-
+/**
+ * find median and exchange points between computers
+ * so that only have points bigger or smaller than 
+ * the median
+ * @param vector receives each computer points
+ * @param n_items # of items
+*/
 double PSRS(double* vector, long n_items)
 {
-    int n_procs;
-
+    
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
-    
-    double *vector_cpy = (double *)malloc(n_items * sizeof(double));
-    double* sample = (double *)malloc(SAMPLE * sizeof(double));
-    double* recvValues;
-    int* aux_vector = (int*)malloc(n_procs*2*sizeof(int));;
-    int result_idx;
-    int n_total;
-    double** partitions = (double**)create_array_pts(n_items, n_procs);
-    double** partitions2recv = (double**)create_array_pts(n_items, n_procs);
-    double_memset(partitions2recv[0], IGNORE_NUM, n_items*n_procs);
 
-    double* finalVector = (double*)malloc(sizeof(double)*2*n_items); //_--------------------------Não sei bem que dimensão colocar aqui
-    int elems_recvd=0;
+    double* sample = (double *)malloc(SAMPLE * sizeof(double)); //Local vector for storing the samples before sending to root
+
+    double* recvValues; // memory position where rank 0 stores the received values
     
-    MPI_Request* requests = (MPI_Request*)malloc(sizeof(MPI_Request)*n_procs);
-    double* partitions_limits = (double*)malloc(sizeof(double)*n_procs);
-    int n_elem;
-    int n_my_elem;
-    int n_to_recv;
-    int i;
-    double aux_limit;
+    if(!rank)//Only rank 0 needs the memory for storing the values
+        recvValues = (double*)malloc(n_procs*SAMPLE*sizeof(double));
+    
+    int n_total; // Total number of points in the problem (sum of all computers n_items)
+
+    double** partitions = (double**)create_array_pts(n_items, n_procs); // partitions to send
+    double** partitions2recv = (double**)create_array_pts(2*n_items, n_procs); // partitions to receive 
+    //(2*n_items should guarantee that any computer can receive the amount of points in another computer)
+
+    memset_double(partitions2recv[0], IGNORE_NUM, 2*n_items*n_procs); // Inicializes the vector with the a value 
+                                                                      // that is going to be ignored, in case the 
+                                                                      // recv vector has more space than needed
+
+    double* finalVector = (double*)malloc(sizeof(double)*2*n_items); // Composition of the partitions belonging to the curr computer
+    int elems_recvd=0; // # of elements in the finalVector
+    
+    MPI_Request* requests = (MPI_Request*)malloc(sizeof(MPI_Request)*n_procs); //To pass as parameter into a non-blocking send call
+    
+    double* partitions_limits = (double*)malloc(sizeof(double)*n_procs); //values where vector of the curr computer is splitted
+    
+    int n_elem; // Number of elements of the partition being worked on 
+    int n_to_recv; // Number of elements of the partition being received
+    
+    int i; //iteratorTempo
+
+    double aux_limit; // saves the smallest/biggest value in the computer
+
     int aux;
     double aux1_db;
     double aux2_db;
+    int* aux_vector = (int*)malloc(n_procs*2*sizeof(int));
 
-    //printf("aqui1, rank: %d\n", rank);
-    //printArray(vector, n_items);
-    
-    if(!rank)
+    #ifdef DEBUG
+        printf("Init vector, rank: %d\n", rank);
+        printArray(vector, n_items);
+    #endif
+
+    //Each processor finds its samples to send to root(rank = 0)
+    for(i=0; i<SAMPLE; i++)
     {
-        recvValues = (double*)malloc(n_procs*SAMPLE*sizeof(double));
-    }
-
-    //printf("aqui2, rank: %d\n", rank);
-    //fflush(stdout);
-
-    for(i=0; i<SAMPLE; i++) //Podemos experimentar retirar a sample apartir de i=1
-    {
-        //printf("aqui3, rank: %d\n", rank);
-        //fflush(stdout);
         sample[i] = getKsmallest(vector, (n_items/SAMPLE)*i, n_items);
-        //printf("sample %d = %lf, rank %d\n", i, sample[i], rank);
-        //fflush(stdout);
+        #ifdef DEBUG
+            printf("Sample %d = %lf, rank %d\n", i, sample[i], rank);
+            fflush(stdout);
+        #endif
     }
-
+    //Each processor sends to root its samples
     MPI_Gather(&(sample[0]), SAMPLE, MPI_DOUBLE, &(recvValues[0]), SAMPLE, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     
-    //printf("aqui5, rank: %d\n", rank);
-    //fflush(stdout);
-    
-    /*if(!rank)
-    {
-        printf("Samples recebidas: \n");
-        printArray(recvValues, SAMPLE*n_procs);
-    }*/
+    #ifdef DEBUG
+        if(!rank)
+        {
+            printf("Samples recebidas: \n");
+            printArray(recvValues, SAMPLE*n_procs);
+        }
+    #endif
 
+    //Root(rank 0) computes the partitions limits from the samples received
     if(!rank)
     {
+        //getKsmallest find the k value from zero
         for(i=1; i<n_procs; i++)
-        {
-            partitions_limits[i-1] = getKsmallest(recvValues, SAMPLE*i-1, n_procs*SAMPLE); //cada processador enviou uma SAMPLE
-        }
-        //printf("Limites do rank 0:\n");
-        //printArray(partitions_limits, n_procs-1);
+            partitions_limits[i-1] = getKsmallest(recvValues, SAMPLE*i-1, n_procs*SAMPLE);
     }
 
-    MPI_Bcast(partitions_limits, n_procs-1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    //root sends partitions limits to every computer
+    MPI_Bcast(&(partitions_limits[0]), n_procs-1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     
-    //printf("Limites do rank %d\n", rank);
-    //printArray(partitions_limits, n_procs-1);
+    #ifdef DEBUG
+        printf("Limites do rank %d\n", rank);
+        printArray(partitions_limits, n_procs-1);
+    #endif
 
+    //Each computer generates their partitions (according with partition_limits)
     for(i=0; i<n_procs; i++)
     {
+        //first and last partition lack limits on partition limit array
         if(i==0)
         {
-            if(i==rank)
-            {
-                aux_limit = getKsmallest(vector, 0, n_items)-1;
-
-                //printf("aux_limit -0: %lf\n", aux_limit);
-                //printf("vector inicial: ");
-                //printArray(vector, n_items);
-                n_elem = getIntervalSet(partitions[i], vector, n_items, aux_limit, partitions_limits[i]);//O zero é arriscado depende dos valores que estamos a guardar
-                //printf("Particao %d do rank %d\n-----------------\n", i, rank);
-                //printArray(partitions[i], n_elem);
-                //printf("-----------------\n", i, rank);
-                //fflush(stdout);
-                elems_recvd = appendArray(finalVector, 0, partitions[i], n_elem, IGNORE_NUM);
-                continue;
-            }
+            aux_limit = getKsmallest(vector, 0, n_items)-1;
+            n_elem = getIntervalSet(partitions[i], vector, n_items, aux_limit, partitions_limits[i]);
+        }
+        else if (i==n_procs-1)
+        {
+            aux_limit = getKsmallest(vector, n_items-1, n_items)+1;
+            n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], aux_limit);
+        }
+        else 
+        {
             n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], partitions_limits[i]);
-            //printf("Particao %d do rank %d\n-----------------\n", i, rank);
-            //printArray(partitions[i], n_elem);
-            //printf("-----------------\n", i, rank);
-            //fflush(stdout);
-            MPI_Isend(&n_elem, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &(requests[i]));
-            MPI_Isend(partitions[i], n_elem, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &(requests[i]));
+        }
+
+        #ifdef DEBUG
+            if (n_elem == 0)
+            {
+                printf("Partition empty!!!!\n");
+                fflush(stdout);
+            }
+            printf("Particao %d do rank %d\n-----------------\n", i, rank);
+            printArray(partitions[i], n_elem);
+        #endif
+
+        if (i==rank) //This covers the case that the processor is building its own partition
+        {
+            elems_recvd = appendArray(finalVector, 0, partitions[i], n_elem, IGNORE_NUM);
         }
         else
-        {
-            if(i==n_procs-1)
-            {
-                if(i==rank)
-                {
-                    //printArray(vector, n_items);
-                    aux_limit = getKsmallest(vector, n_items-1, n_items);
-                    //printf("rank %d, Limit superior: %lf\n, inferior: %lf", rank, aux_limit, partitions_limits[i-1]);
-                    //printArray(vector, n_items);
-                    n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], aux_limit);//O zero é arriscado depende dos valores que estamos a guardar
-                    //printf("---Particao %d do rank %d\n-----------------\n", i, rank);
-                    //printArray(partitions[i], n_elem);
-                    //printf("-----------------\n", i, rank);
-                    //fflush(stdout);
-                    elems_recvd = appendArray(finalVector, 0, partitions[i], n_elem, IGNORE_NUM);
-                    continue;
-                }
-                aux_limit = getKsmallest(vector, n_items-1, n_items);
-                //printf("rank %d, Limit superior: %lf\n, inferior: %lf", rank, aux_limit, partitions_limits[i-1]);
-                //printArray(vector, n_items);
-                
-                n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], aux_limit);
-                //printf("---Particao %d do rank %d\n-----------------\n", i, rank);
-                //printArray(partitions[i], n_elem);
-                //printf("-----------------\n", i, rank);
-                //fflush(stdout);
-                MPI_Isend(&n_elem, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &(requests[i]));
+        {            
+            MPI_Isend(&n_elem, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &(requests[i]));
+            if (n_elem)
                 MPI_Isend(partitions[i], n_elem, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &(requests[i]));
-            }
-            else
-            {
-                if(i==rank)
-                {
-                    n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], partitions_limits[i]);
-                    //printf("Particao %d do rank %d\n-----------------\n", i, rank);
-                    //printArray(partitions[i], n_elem);
-                    //printf("-----------------\n", i, rank);
-                    //fflush(stdout);
-                    elems_recvd = appendArray(finalVector, 0, partitions[i], n_elem, IGNORE_NUM);
-                    continue;
-                }
-                n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], partitions_limits[i]);
-                //printf("Particao %d do rank %d\n-----------------\n", i, rank);
-                //printArray(partitions[i], n_elem);
-                //printf("-----------------\n", i, rank);
-                //fflush(stdout);
-                MPI_Isend(&n_elem, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &(requests[i]));
-                MPI_Isend(partitions[i], n_elem, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &(requests[i]));
-            }
         }
     }
-
+    
+    //wait that all computers construct and send their partitions
     MPI_Barrier(MPI_COMM_WORLD);
 
     for(i=0; i<n_procs; i++)
     {
         if(i==rank)
             continue;
+        else
+        {
+            MPI_Recv(&n_to_recv, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        MPI_Recv(&n_to_recv, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        //printf("Rank %d recebeu %d do rank %d\n", rank, n_to_recv, i);
-        MPI_Recv(partitions2recv[i], n_to_recv , MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        //printf("--------Rank %d recebeu do rank %d--------\n", rank, i);
-        //printArray(partitions2recv[i], n_to_recv);
-        elems_recvd = appendArray(finalVector, elems_recvd, partitions2recv[i], n_to_recv, IGNORE_NUM);
+            if (n_to_recv)
+            {
+                MPI_Recv(partitions2recv[i], n_to_recv , MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                #ifdef DEBUG
+                    printf("--------Rank %d recebeu do rank %d--------\n", rank, i);
+                    printArray(partitions2recv[i], n_to_recv);
+                #endif
+            }
+            //O IGNORE_NUM pode ser descecessário, há argumentos a mais nesta função ---------------- REVER
+            elems_recvd = appendArray(finalVector, elems_recvd, partitions2recv[i], n_to_recv, IGNORE_NUM);
+        }
     }
 
-    //printf("Valores finais do rank %d\n", rank);
-    //printArray(finalVector, elems_recvd);
+    #ifdef DEBUG
+        printf("Valores finais do rank %d\n", rank);
+        printArray(finalVector, elems_recvd);
+    #endif
 
-    aux = elems_recvd;
-
+    //update the number of points in the computer, from now on the finalVector
+    //will be used to refer to the points from this computer
     n_items = elems_recvd;
+    // shares with root the number of points in the curr computer 
+    MPI_Gather(&n_items, 1, MPI_INT, &(aux_vector[0]), 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    //o nome partitions_limits não tem lógica aqui, mas o objectivo é reutilizar o vetor que já não seja necessário
+    int median_holder1; // rank of the computer holding the median
+    int median_holder2; // rank of the computer holding the second val to compute median (pair number of points)
+    int median_idx1;    // index of the median in the computer thet holds it
+    int median_idx2;    // index of the the second val to compute median (pair number of points)
 
-    MPI_Gather(&aux, 1, MPI_INT, &(aux_vector[0]), 1, MPI_INT, 0, MPI_COMM_WORLD);
-    
-
-    /*if(!rank)
-    {
-        printf("Isto: ");
-        printf("%d, %d, %d\n", aux_vector[0], aux_vector[1], aux_vector[2]);
-        fflush(stdout);
-    }*/
-
-    int median_holder1;
-    int median_holder2;
-    int median_idx1;
-    int median_idx2;
-
+    // root finds out the median index and which computer(s) holds it
     if(!rank)
     {
+        //sum the number of points in each computer
         n_total = getVectorSum(aux_vector, n_procs);
         
-        //printf("N total: %d\n", n_total);
-        //fflush(stdout);
+        #ifdef DEBUG
+            printf("N total: %d\n", n_total);
+            fflush(stdout);
+        #endif
 
+        // odd n_total -> median is one of the points
         if(n_total%2 != 0)
         {
             median_idx1 = find_K_idx(aux_vector, n_total/2, n_total, &median_holder1);
 
-            //printf("median1: %d\n", median_idx1);
-            //printf("holder1: %d\n", median_holder1);
-            //fflush(stdout);
-
+            #ifdef DEBUG
+                printf("Median1: %d\n", median_idx1);
+                printf("Holder1: %d\n", median_holder1);
+                fflush(stdout);
+            #endif
+            
+            // initializes vector which tells where the median is
             for(i = 0; i<n_procs*2; i++)
                 aux_vector[i] = -1;
-            
-            aux=0;
 
+            //Fill the vector with the median_idx for the computer that holds it
             for(i=0; i<n_procs; i++)
             {
                 if(i == median_holder1)
-                    aux_vector[aux] = median_idx1;
-
-                MPI_Isend(&(aux_vector[aux]), 2, MPI_INT, i, 2, MPI_COMM_WORLD, &(requests[i]));
-                aux++;
+                    aux_vector[2*i] = median_idx1;
+                MPI_Isend(&(aux_vector[2*i]), 2, MPI_INT, i, 2, MPI_COMM_WORLD, &(requests[i]));
             }
         }
         else
@@ -427,55 +409,45 @@ double PSRS(double* vector, long n_items)
             median_idx1 = find_K_idx(aux_vector, n_total/2, n_total, &median_holder1);
             median_idx2 = find_K_idx(aux_vector, (n_total/2)-1, n_total, &median_holder2);
 
-            //printf("median1: %d\n", median_idx1);
-            //printf("median2: %d\n", median_idx2);
-            //printf("holder1: %d\n", median_holder1);
-            //printf("holder2: %d\n", median_holder1);
-            //fflush(stdout);
-
+            #ifdef DEBUG
+                printf("median1: %d\n", median_idx1);
+                printf("median2: %d\n", median_idx2);
+                printf("holder1: %d\n", median_holder1);
+                printf("holder2: %d\n", median_holder1);
+                fflush(stdout);
+            #endif 
+            
             for(i = 0; i<n_procs*2; i++)
                 aux_vector[i] = -1;
-
-            aux=0;
             
             for(i = 0; i<n_procs; i++)
             {
                 if(i == median_holder1)
-                {
-                    aux_vector[aux] = median_idx1;
-                }
-                else
-                    aux_vector[aux] = -1;
-                aux++;
+                    aux_vector[2*i] = median_idx1;
 
                 if(i == median_holder2)
-                {
-                    aux_vector[aux] = median_idx2;
-                }
-                else
-                    aux_vector[aux] = -1;
-                aux++;
-            }
+                    aux_vector[2*i+1] = median_idx2;
 
-            //printf("%d %d %d %d %d %d\n", aux_vector[0], aux_vector[1], aux_vector[2], aux_vector[3], aux_vector[4], aux_vector[5]);
-            //fflush(stdout);
-
-            for(i=0; i<n_procs; i++)
                 MPI_Isend(&(aux_vector[2*i]), 2, MPI_INT, i, 2, MPI_COMM_WORLD, &(requests[i]));
+                
+            }
         }
     }
     
     MPI_Recv(&(aux_vector[0]), 2, MPI_INT, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-    //printf("rank %d recebeu: %d %d\n", rank, aux_vector[0], aux_vector[1]);
-    //fflush(stdout);
-    
+    #ifdef DEBUG    
+        printf("Rank %d recebeu: %d %d\n", rank, aux_vector[0], aux_vector[1]);
+        fflush(stdout);
+    #endif
+
     for(i=0; i<2; i++)
     {
         if(aux_vector[i] != -1)//aux_limit é reutilizado
-        {
+        {   
+            //find median value
             aux_limit = getKsmallest(finalVector, aux_vector[i], n_items);
-            //printf("Buscado valor: %lf", aux_limit);
+            //sends median value to root
             MPI_Isend(&aux_limit, 1, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD, &(requests[i]));
         }
     }
@@ -485,23 +457,24 @@ double PSRS(double* vector, long n_items)
         if(n_total%2 == 0)
         {
             MPI_Recv(&aux1_db, 1, MPI_DOUBLE, median_holder1, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            MPI_Recv(&aux2_db, 1, MPI_DOUBLE, median_holder1, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            printf("---------------------------------Mediana final: %lf\n", (aux1_db + aux2_db)/2);
-            fflush(stdout);
+            MPI_Recv(&aux2_db, 1, MPI_DOUBLE, median_holder2, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            #ifdef DEBUG
+                printf("------------------Mediana final: %lf\n", (aux1_db + aux2_db)/2);
+                fflush(stdout);
+            #endif
             return (aux1_db + aux2_db)/2;
         }
         else
         {
             MPI_Recv(&aux1_db, 1, MPI_DOUBLE, median_holder1, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            printf("---------------------------------Mediana final: %lf\n", aux1_db);
-            fflush(stdout);
+            #ifdef DEBUG
+                printf("------------------Mediana final: %lf\n", aux1_db);
+                fflush(stdout);
+            #endif
             return aux1_db;
         }
     }
-
-    //printf("chegou ao fim||||||||||||||\n");
-    //fflush(stdout);
-
+    
     //Todos menos o rank 0 vão fazer return de 0. O rank 0 faz return da mediana
     return 0;
 }
@@ -744,7 +717,7 @@ void printArray(double* vector, int n_elem)
     fflush(stdout);
 }
 
-void double_memset(double* vector, double to_set, int n_elem)
+void memset_double(double* vector, double to_set, int n_elem)
 {
     for(int i=0; i<n_elem; i++)
     {

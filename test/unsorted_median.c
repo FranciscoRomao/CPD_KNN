@@ -4,9 +4,14 @@
 #include <time.h>
 #include <float.h>
 #include <mpi.h>
+#include <string.h>
 #include "unsorted_median.h"
+#include "gen_points.h"
 
+#define IGNORE_NUM -1010101010
 #define SAMPLE 3
+
+int rank;
 
 /**
  * Compare function used inside quicksort
@@ -148,14 +153,14 @@ double median(double *vector, int n_items)
         //printf("Mediana das medianas: %lf\n", result);
         //result = buildSet(setL, setR, vector, n_items, result);
         free(medians);
-        printf("Mediana das medianas: %lf\n", result);
+        //printf("Mediana das medianas: %lf\n", result);
         return result;
     }
 
     result = median(medians, full_splits + (semi_splits!=0 ? 1 : 0));
     free(medians);
 
-    printf("Mediana das medianas: %lf\n", result);
+    //printf("Mediana das medianas: %lf\n", result);
 
     //result = buildSet(setL, setR, vector, n_items, result);
 
@@ -192,98 +197,313 @@ int vectorSum(int* vector, int n)
     return count;
 }
 
-double PSRS(double* vector, long k, long n_items)
+double PSRS(double* vector, long n_items)
 {
-    int rank;
-    int n_points;
+    int n_procs;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
     
-    //double *vector_cpy = (double *)malloc(n_items * sizeof(double));
+    double *vector_cpy = (double *)malloc(n_items * sizeof(double));
     double* sample = (double *)malloc(SAMPLE * sizeof(double));
     double* recvValues;
-    double* partitions_limits;
+    int* aux_vector = (int*)malloc(n_procs*2*sizeof(int));;
     int result_idx;
-    double** partitions2send = (double**)create_array_pts(n_points, n_procs);
-    double** partitions2recv = (double**)create_array_pts(n_points, n_procs);
-    double* newVector = (double*)malloc(sizeof(double)*2*n_points); //_--------------------------Não sei bem que dimensão colocar aqui
-    int elems_recvd;
+    int n_total;
+    double** partitions = (double**)create_array_pts(n_items, n_procs);
+    double** partitions2recv = (double**)create_array_pts(n_items, n_procs);
+    double_memset(partitions2recv[0], IGNORE_NUM, n_items*n_procs);
+
+    double* finalVector = (double*)malloc(sizeof(double)*2*n_items); //_--------------------------Não sei bem que dimensão colocar aqui
+    int elems_recvd=0;
     
     MPI_Request* requests = (MPI_Request*)malloc(sizeof(MPI_Request)*n_procs);
+    double* partitions_limits = (double*)malloc(sizeof(double)*n_procs);
     int n_elem;
+    int n_my_elem;
     int n_to_recv;
     int i;
+    double aux_limit;
+    int aux;
+    double aux1_db;
+    double aux2_db;
 
-    
-    //arraycpy(vector_cpy, vector, n_items);
-    
+    //printf("aqui1, rank: %d\n", rank);
     //printArray(vector, n_items);
+    
+    if(!rank)
+    {
+        recvValues = (double*)malloc(n_procs*SAMPLE*sizeof(double));
+    }
+
+    //printf("aqui2, rank: %d\n", rank);
+    //fflush(stdout);
+
+    for(i=0; i<SAMPLE; i++) //Podemos experimentar retirar a sample apartir de i=1
+    {
+        //printf("aqui3, rank: %d\n", rank);
+        //fflush(stdout);
+        sample[i] = getKsmallest(vector, (n_items/SAMPLE)*i, n_items);
+        //printf("sample %d = %lf, rank %d\n", i, sample[i], rank);
+        //fflush(stdout);
+    }
+
+    MPI_Gather(&(sample[0]), SAMPLE, MPI_DOUBLE, &(recvValues[0]), SAMPLE, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    
+    //printf("aqui5, rank: %d\n", rank);
+    //fflush(stdout);
+    
+    /*if(!rank)
+    {
+        printf("Samples recebidas: \n");
+        printArray(recvValues, SAMPLE*n_procs);
+    }*/
 
     if(!rank)
     {
-        recvValues = malloc(n_procs*SAMPLE*sizeof(int));
-    }
-
-    for(i=0; i<SAMPLE; i++)
-    {
-        sample[i] = getKsmallest(vector, (n_items/3)*i, n_items);
-    }
-
-    MPI_Gather(sample, 3, MPI_DOUBLE, recvValues, 3, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    if(!rank)
-    {
-        linerize((double**)recvValues, n_procs, SAMPLE, recvValues);
-
-        partitions_limits = (double*)malloc(sizeof(double)*n_procs);
-
-        for(i=0; i<n_procs-1; i++)//porque o ultimo elemente é o ultimo elemento não precisa de ser enviado
+        for(i=1; i<n_procs; i++)
         {
-            partitions_limits[i] = getKsmallest(recvValues, SAMPLE*i, n_procs*SAMPLE); //cada processador enviou uma SAMPLE
+            partitions_limits[i-1] = getKsmallest(recvValues, SAMPLE*i-1, n_procs*SAMPLE); //cada processador enviou uma SAMPLE
         }
+        //printf("Limites do rank 0:\n");
+        //printArray(partitions_limits, n_procs-1);
     }
 
-    MPI_Bcast(&partitions_limits, n_procs-1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(partitions_limits, n_procs-1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    
+    //printf("Limites do rank %d\n", rank);
+    //printArray(partitions_limits, n_procs-1);
 
-    for(i=0; i<n_procs-1; i++)
+    for(i=0; i<n_procs; i++)
     {
         if(i==0)
         {
             if(i==rank)
             {
-                result_idx = getIntervalSet(partitions2recv[i], &n_elem, vector, n_items, 0, partitions_limits[i]);
+                aux_limit = getKsmallest(vector, 0, n_items)-1;
+
+                //printf("aux_limit -0: %lf\n", aux_limit);
+                //printf("vector inicial: ");
+                //printArray(vector, n_items);
+                n_elem = getIntervalSet(partitions[i], vector, n_items, aux_limit, partitions_limits[i]);//O zero é arriscado depende dos valores que estamos a guardar
+                //printf("Particao %d do rank %d\n-----------------\n", i, rank);
+                //printArray(partitions[i], n_elem);
+                //printf("-----------------\n", i, rank);
+                //fflush(stdout);
+                elems_recvd = appendArray(finalVector, 0, partitions[i], n_elem, IGNORE_NUM);
                 continue;
             }
-            result_idx = getIntervalSet(partitions[i], &n_elem, vector, n_items, 0, partitions_limits[i]);
-            //MPI_Send(partitions[i], n_elem, MPI_DOUBLE, i, i, MPI_COMM_WORLD);
-            MPI_Isend(&n_elem, 1, MPI_INT, i, i, MPI_COMM_WORLD, &(requests[i]));
-            MPI_Isend(partitions[i], n_elem, MPI_DOUBLE, i, i, MPI_COMM_WORLD, &(requests[i]));
+            n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], partitions_limits[i]);
+            //printf("Particao %d do rank %d\n-----------------\n", i, rank);
+            //printArray(partitions[i], n_elem);
+            //printf("-----------------\n", i, rank);
+            //fflush(stdout);
+            MPI_Isend(&n_elem, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &(requests[i]));
+            MPI_Isend(partitions[i], n_elem, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &(requests[i]));
         }
-        else  
+        else
         {
-            if(i==rank)
+            if(i==n_procs-1)
             {
-                result_idx = getIntervalSet(partitions2recv[i], &n_elem, vector, n_items, 0, partitions_limits[i]);
-                continue;
+                if(i==rank)
+                {
+                    //printArray(vector, n_items);
+                    aux_limit = getKsmallest(vector, n_items-1, n_items);
+                    //printf("rank %d, Limit superior: %lf\n, inferior: %lf", rank, aux_limit, partitions_limits[i-1]);
+                    //printArray(vector, n_items);
+                    n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], aux_limit);//O zero é arriscado depende dos valores que estamos a guardar
+                    //printf("---Particao %d do rank %d\n-----------------\n", i, rank);
+                    //printArray(partitions[i], n_elem);
+                    //printf("-----------------\n", i, rank);
+                    //fflush(stdout);
+                    elems_recvd = appendArray(finalVector, 0, partitions[i], n_elem, IGNORE_NUM);
+                    continue;
+                }
+                aux_limit = getKsmallest(vector, n_items-1, n_items);
+                //printf("rank %d, Limit superior: %lf\n, inferior: %lf", rank, aux_limit, partitions_limits[i-1]);
+                //printArray(vector, n_items);
+                
+                n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], aux_limit);
+                //printf("---Particao %d do rank %d\n-----------------\n", i, rank);
+                //printArray(partitions[i], n_elem);
+                //printf("-----------------\n", i, rank);
+                //fflush(stdout);
+                MPI_Isend(&n_elem, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &(requests[i]));
+                MPI_Isend(partitions[i], n_elem, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &(requests[i]));
             }
-            result_idx = getIntervalSet(partitions[i], &n_elem, vector, n_items, partitions_limits[i-1], partitions_limits[i]);
-            MPI_Isend(&n_elem, 1, MPI_INT, i, i, MPI_COMM_WORLD, &(requests[i]));
-            MPI_Isend(partitions[i], n_elem, MPI_DOUBLE, i, i, MPI_COMM_WORLD, &(requests[i]));
+            else
+            {
+                if(i==rank)
+                {
+                    n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], partitions_limits[i]);
+                    //printf("Particao %d do rank %d\n-----------------\n", i, rank);
+                    //printArray(partitions[i], n_elem);
+                    //printf("-----------------\n", i, rank);
+                    //fflush(stdout);
+                    elems_recvd = appendArray(finalVector, 0, partitions[i], n_elem, IGNORE_NUM);
+                    continue;
+                }
+                n_elem = getIntervalSet(partitions[i], vector, n_items, partitions_limits[i-1], partitions_limits[i]);
+                //printf("Particao %d do rank %d\n-----------------\n", i, rank);
+                //printArray(partitions[i], n_elem);
+                //printf("-----------------\n", i, rank);
+                //fflush(stdout);
+                MPI_Isend(&n_elem, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &(requests[i]));
+                MPI_Isend(partitions[i], n_elem, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &(requests[i]));
+            }
+        }
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    for(i=0; i<n_procs; i++)
+    {
+        if(i==rank)
+            continue;
+
+        MPI_Recv(&n_to_recv, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        //printf("Rank %d recebeu %d do rank %d\n", rank, n_to_recv, i);
+        MPI_Recv(partitions2recv[i], n_to_recv , MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        //printf("--------Rank %d recebeu do rank %d--------\n", rank, i);
+        //printArray(partitions2recv[i], n_to_recv);
+        elems_recvd = appendArray(finalVector, elems_recvd, partitions2recv[i], n_to_recv, IGNORE_NUM);
+    }
+
+    //printf("Valores finais do rank %d\n", rank);
+    //printArray(finalVector, elems_recvd);
+
+    aux = elems_recvd;
+
+    n_items = elems_recvd;
+
+    //o nome partitions_limits não tem lógica aqui, mas o objectivo é reutilizar o vetor que já não seja necessário
+
+    MPI_Gather(&aux, 1, MPI_INT, &(aux_vector[0]), 1, MPI_INT, 0, MPI_COMM_WORLD);
+    
+
+    /*if(!rank)
+    {
+        printf("Isto: ");
+        printf("%d, %d, %d\n", aux_vector[0], aux_vector[1], aux_vector[2]);
+        fflush(stdout);
+    }*/
+
+    int median_holder1;
+    int median_holder2;
+    int median_idx1;
+    int median_idx2;
+
+    if(!rank)
+    {
+        n_total = getVectorSum(aux_vector, n_procs);
+        
+        //printf("N total: %d\n", n_total);
+        //fflush(stdout);
+
+        if(n_total%2 != 0)
+        {
+            median_idx1 = find_K_idx(aux_vector, n_total/2, n_total, &median_holder1);
+
+            //printf("median1: %d\n", median_idx1);
+            //printf("holder1: %d\n", median_holder1);
+            //fflush(stdout);
+
+            for(i = 0; i<n_procs*2; i++)
+                aux_vector[i] = -1;
+            
+            aux=0;
+
+            for(i=0; i<n_procs; i++)
+            {
+                if(i == median_holder1)
+                    aux_vector[aux] = median_idx1;
+
+                MPI_Isend(&(aux_vector[aux]), 2, MPI_INT, i, 2, MPI_COMM_WORLD, &(requests[i]));
+                aux++;
+            }
+        }
+        else
+        {
+            median_idx1 = find_K_idx(aux_vector, n_total/2, n_total, &median_holder1);
+            median_idx2 = find_K_idx(aux_vector, (n_total/2)-1, n_total, &median_holder2);
+
+            //printf("median1: %d\n", median_idx1);
+            //printf("median2: %d\n", median_idx2);
+            //printf("holder1: %d\n", median_holder1);
+            //printf("holder2: %d\n", median_holder1);
+            //fflush(stdout);
+
+            for(i = 0; i<n_procs*2; i++)
+                aux_vector[i] = -1;
+
+            aux=0;
+            
+            for(i = 0; i<n_procs; i++)
+            {
+                if(i == median_holder1)
+                {
+                    aux_vector[aux] = median_idx1;
+                }
+                else
+                    aux_vector[aux] = -1;
+                aux++;
+
+                if(i == median_holder2)
+                {
+                    aux_vector[aux] = median_idx2;
+                }
+                else
+                    aux_vector[aux] = -1;
+                aux++;
+            }
+
+            //printf("%d %d %d %d %d %d\n", aux_vector[0], aux_vector[1], aux_vector[2], aux_vector[3], aux_vector[4], aux_vector[5]);
+            //fflush(stdout);
+
+            for(i=0; i<n_procs; i++)
+                MPI_Isend(&(aux_vector[2*i]), 2, MPI_INT, i, 2, MPI_COMM_WORLD, &(requests[i]));
         }
     }
     
-    for(i=0; i<n_procs-1; i++)
+    MPI_Recv(&(aux_vector[0]), 2, MPI_INT, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    //printf("rank %d recebeu: %d %d\n", rank, aux_vector[0], aux_vector[1]);
+    //fflush(stdout);
+    
+    for(i=0; i<2; i++)
     {
-        elems_recvd = 0;
-        MPI_Recv(&n_to_recv, 1, MPI_INT, i, rank, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(partitions2recv[i], n_to_recv , MPI_DOUBLE, i, rank, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        appendArray(newVector, elems_recvd, partitions2recv[i], n_to_recv);
+        if(aux_vector[i] != -1)//aux_limit é reutilizado
+        {
+            aux_limit = getKsmallest(finalVector, aux_vector[i], n_items);
+            //printf("Buscado valor: %lf", aux_limit);
+            MPI_Isend(&aux_limit, 1, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD, &(requests[i]));
+        }
     }
 
-    //O algoritmo está implementado agora falta calcular a median e que processadores vão para um lado e para o outro
-    //------------------------------------------------------------
-    return result;
+    if(!rank)
+    {
+        if(n_total%2 == 0)
+        {
+            MPI_Recv(&aux1_db, 1, MPI_DOUBLE, median_holder1, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&aux2_db, 1, MPI_DOUBLE, median_holder1, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            printf("---------------------------------Mediana final: %lf\n", (aux1_db + aux2_db)/2);
+            fflush(stdout);
+            return (aux1_db + aux2_db)/2;
+        }
+        else
+        {
+            MPI_Recv(&aux1_db, 1, MPI_DOUBLE, median_holder1, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            printf("---------------------------------Mediana final: %lf\n", aux1_db);
+            fflush(stdout);
+            return aux1_db;
+        }
+    }
+
+    //printf("chegou ao fim||||||||||||||\n");
+    //fflush(stdout);
+
+    //Todos menos o rank 0 vão fazer return de 0. O rank 0 faz return da mediana
+    return 0;
 }
 
 
@@ -469,33 +689,108 @@ double* linerize(double** matrix, int nx, int ny, double* vector)//x é o numero
     {
         for(int j=0; j<ny; j++)
         {
-            vetor[i*nx+j] = matrix[i][j];
+            vector[i*nx+j] = matrix[i][j];
         }
     }
 }
 
-double getIntervalSet(double *interval, int* counter, double *vector, int n_items, double comparatorL, double comparatorR)
+double getIntervalSet(double *interval, double *vector, int n_items, double comparatorL, double comparatorR)
 {
-    *counter=0;
+    int counter=0;
 
     for(int i=0; i<n_items; i++)
     {
         //printArray(setL, *counterL);
         if(vector[i]>comparatorL && vector[i]<=comparatorR)
         {
-            (*counterL)++;
-            setL[(*counterL)-1] = vector[i];
+            counter++;
+            interval[counter-1] = vector[i];
         }
     }
     //printArray(setL, *counterL);
     //printf("Sets criados: setL %d items, setR %d items, idx da mediana: %d\n\n", *counterL, *counterR, (*counterL));
-    return (*counterL);
+    return counter;
 }
 
-void appendArray(double* dest, int begin_idx, double* source, int n_elem)
+int appendArray(double* dest, int begin_idx, double* source, int n_elem, double ignore)
+{
+    int j=0;
+
+    for(int i=0; i<n_elem; i++)
+    {
+        /*if(source[i] == (double)ignore)
+        {
+            //printf("rank aqui ----- %d", rank);
+            //if(rank == 1)
+            //    printf("entrou\n");
+            continue;
+        }*/
+
+        //dest[j+begin_idx] = source[i];
+        dest[i+begin_idx] = source[i];
+        //j++;
+    }
+
+    return begin_idx+n_elem;
+}
+
+void printArray(double* vector, int n_elem)
 {
     for(int i=0; i<n_elem; i++)
     {
-        dest[i+begin_idx] = source[i];
+        printf("%lf ", vector[i]);
+    }
+    printf("\n");
+    fflush(stdout);
+}
+
+void double_memset(double* vector, double to_set, int n_elem)
+{
+    for(int i=0; i<n_elem; i++)
+    {
+        vector[i] = to_set;
+    }
+}
+
+//Retornar o indice do k dentro da partição com k
+int find_K_idx(int *vector, int k, int n_elem, int* median_holder)
+{
+    int counter = 0;
+
+    for(int i=0; i<n_elem; i++)
+    {
+        counter += vector[i];
+
+        if(counter>=k)
+        {
+            *median_holder = i;
+            return k - (counter - vector[i]);
+        }
+    }
+    return -1;
+}
+
+int getVectorSum(int* vector, int n_elem)
+{
+    int counter = 0;
+
+    for(int i=0; i<n_elem; i++)
+    {
+        counter += vector[i];
+    }
+    return counter;
+}
+
+double medianSort(double* vector, int n_items)
+{
+    qsort(vector, n_items, sizeof(double), cmpfunc);
+
+    if(n_items % 2 != 0)
+    {
+        return vector[n_items/2];
+    }
+    else
+    {
+        return 0.5 * (vector[n_items/2] + vector[n_items/2 - 1]);
     }
 }

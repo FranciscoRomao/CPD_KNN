@@ -7,16 +7,41 @@
 #include "gen_points.h"
 #include "unsorted_median.h"
 
+#define SAMPLE 3
 
 int main(int argc, char *argv[])
 {
     double exec_time;
     double* pts;
-    long n_points;
+    double* pts_test;
+    long n_points = atol(argv[2]);;
+    long n_points_test = atol(argv[2]);
+    int rank;
+    int n_procs;
 
     MPI_Init(&argc, &argv);
 
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
+
+    if(n_procs * SAMPLE > n_points)
+    {
+        if(!rank)
+            printf("Isto tem de ser implementado para correr numa máquina só, porque senão dá bugada\n"); fflush(stdout);
+        return -1;
+    }
+    
     pts = get_points_1dim_mpi(argc, argv, MPI_COMM_WORLD, &n_points);
+
+
+    if(!rank)
+    {
+        pts_test = get_points_1dim(argc, argv);
+        //printf("pontos gerados\n");
+        //printArray(pts_test, n_points_test);
+        printf("-------------------------Mediana real: %lf\n", medianSort(pts_test, n_points_test));
+        fflush(stdout);
+    }
     
     double median;
 
@@ -35,10 +60,16 @@ int main(int argc, char *argv[])
     build_tree(tree, 0, pts, projections, n_points, n_dims, Even_Comm); 10
 	*/
 	
-	median = getKsmallest(pts, n_points/2 , n_points);
+	//median = getKsmallest(pts, n_points/2 , n_points);
+
+
+    PSRS(pts, n_points);
+
+    //printf("FIMMMMMM, rank %d\n", rank);
+    //fflush(stdout);
 
     MPI_Finalize();
 
-    free(pts);
+    //free(pts);
 
 }

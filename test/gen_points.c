@@ -247,3 +247,35 @@ double* get_points_1dim_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local
 
     return pt_arr;
 }
+
+double* get_points_1dim(int argc, char *argv[])
+{
+    unsigned seed;
+    int rank;
+    int n_procs;
+    int n_dims;
+    long np;
+    long i;
+    int j;
+    int k;
+
+    np = atol(argv[2]);
+
+    double* pt_arr = (double *)malloc(np*sizeof(double));
+
+    seed = atoi(argv[3]);
+    srandom(seed);
+    
+    if (argc != 4 && rank == 0)
+    {
+        printf("Usage: %s <n_dims> <n_points> <seed>\n", argv[0]);
+        exit(1);
+    }
+
+    for (i = 0; i<np; i++)
+    {
+        pt_arr[i] = RANGE * ((double)random()) / RAND_MAX;
+    }
+
+    return pt_arr;
+}

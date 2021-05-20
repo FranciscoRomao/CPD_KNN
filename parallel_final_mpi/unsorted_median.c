@@ -337,10 +337,10 @@ void compare_with_median (double* projections, double** pts, double median, long
                 projections[right_pivot] = projections[left_pivot];
                 projections[left_pivot] = aux;
 
-                swap_points(pts[right_pivot],pts[left_pivot],n_dims);
-                //aux_pt = pts[right_pivot];
-                //pts[right_pivot] = pts[left_pivot];
-                //pts[left_pivot] = aux_pt;
+                //swap_points(pts[right_pivot],pts[left_pivot],n_dims);
+                aux_pt = pts[right_pivot];
+                pts[right_pivot] = pts[left_pivot];
+                pts[left_pivot] = aux_pt;
             } else {
                right_pivot--;
            }

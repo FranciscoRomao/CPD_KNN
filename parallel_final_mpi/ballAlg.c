@@ -300,14 +300,8 @@ int main(int argc, char *argv[])
     exec_time = -omp_get_wtime();
 
     //generates dataset
-    if(rank==0)
-        pts = get_points(argc, argv);
-    else{
-        _p_arr = (double *)malloc(n_dims * n_points * sizeof(double));
-        pts = (double **)malloc(n_points * sizeof(double *));
-        for (long i = 0; i < n_points; i++)
-        pts[i] = &_p_arr[i * n_dims];
-    }
+    pts = get_points(argc, argv);
+
     double* pts_first_position = pts[0];
 
 

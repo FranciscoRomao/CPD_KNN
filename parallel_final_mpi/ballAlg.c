@@ -87,7 +87,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
     }*/
     node foo;
 //if(rank==0){
-    //flag(76,my_name);
+    flag(76,my_name);
     foo.id=node_id;
 
     if (n_points == 1) //if the node is a leaf
@@ -95,12 +95,12 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         foo.R = -1;
         foo.L = -1;
         foo.radius = 0;
-        //flag(77,my_name);
+        flag(77,my_name);
         foo.center = pts[0];
-        //flag(78,my_name);
+        flag(78,my_name);
         if(rank==0)
             print_Node(foo,n_dims);
-        //flag(79,my_name);
+        flag(79,my_name);
         return;
     }
 
@@ -110,7 +110,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
 
     foo.center = (double *)malloc(n_dims * sizeof(double));
 
-    //flag(94,my_name);
+    flag(94,my_name);
 
     if(n_points == 2) //only two points in the set -> easier/lesser operations
     {   
@@ -121,7 +121,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
         print_pts(pts,start_npoints,n_dims);printf("\n");
         print_pjs(projections,start_npoints);printf("\n");*/
-        //flag(100,my_name);
+        flag(100,my_name);
         double* aux;
         //printf("node_id:%ld pts[0][0]:%lf pts[1][0]:%lf\n\n",node_id,pts[0][0],pts[1][0]);
         if (pts[0][0] > pts[1][0]) //sort ascending if not already
@@ -130,17 +130,17 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             pts[0] = pts[1];
             pts[1] = aux;
         }
-        //flag(107,my_name);
+        flag(107,my_name);
         //median of two points is its average
         for(int i=0; i<n_dims; i++)
         {
             foo.center[i] = (pts[0][i] + pts[1][i]) / 2;
         }
-        //flag(113,my_name);
+        flag(113,my_name);
         //both points are equidistant to the center
         foo.radius = distance(n_dims, pts[0], foo.center);
         //printf("radius:%lf\n",foo.radius);
-        //flag(115,my_name);
+        flag(115,my_name);
         //build leafs
         if(rank==0)
             print_Node(foo,n_dims);
@@ -159,7 +159,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         recursive_furthest_apart(n_dims, n_points, pts, idx_fp); 
         //pseudo-projection of all points (enough to know relative positions) 
         project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
-        //flag(136,my_name);
+        flag(136,my_name);
 
         if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
         {   
@@ -179,7 +179,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             double* center_r=(double*)malloc(n_dims*sizeof(double));
             orthogonal_projection(n_dims, pts[median_left_idx], pts[idx_fp[0]], pts[idx_fp[1]], center_l);
             orthogonal_projection(n_dims, pts[median_right_idx], pts[idx_fp[0]], pts[idx_fp[1]], center_r);
-            //flag(156,my_name);
+            flag(156,my_name);
             for(int i=0; i<n_dims; i++)
             {
                 foo.center[i] = (center_l[i] + center_r[i]) / 2;
@@ -197,7 +197,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             median = getKsmallest(projections, n_points/2, n_points);
 
             median_idx = find_idx_from_value(projections, n_points, median);
-            //flag(174,my_name);
+            flag(174,my_name);
             //compute and set center of the node
             orthogonal_projection(n_dims, pts[median_idx], pts[idx_fp[0]], pts[idx_fp[1]], foo.center);
 
@@ -218,12 +218,12 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         {
             foo.radius = radius_candidate[0];
         }
-        //flag(195,my_name);
+        flag(195,my_name);
         rnode_id = node_id + 2 * center_idx;
         foo.R = rnode_id;
         if(rank==0)
             print_Node(foo,n_dims);
-        //flag(201,my_name);
+        flag(201,my_name);
     }
 //}
 
@@ -231,13 +231,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
     MPI_Comm_size(comm, &size_world);
     if(size_world>=2 && (n_points != 1 && n_points!=2))
     {   
-        MPI_Bcast(pts[0],start_npoints*n_dims,MPI_DOUBLE,0,comm);
-        MPI_Bcast(projections,start_npoints,MPI_DOUBLE,0,comm);
-        MPI_Bcast(&rnode_id,1,MPI_LONG,0,comm);
-        MPI_Bcast(&lnode_id,1,MPI_LONG,0,comm);
-        MPI_Bcast(&center_idx,1,MPI_LONG,0,comm);
-        MPI_Bcast(&n_points,1,MPI_LONG,0,comm);
-        /*if(rank==0){
+        if(rank==0){
         printf("Before comm:\n");
         printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
         print_pts(pts,n_points,n_dims);printf("\n");
@@ -247,7 +241,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
             print_pts(pts,n_points,n_dims);printf("\n");
             print_pjs(projections,n_points);printf("\n");
-        }*/
+        }
 
         MPI_Comm above_comm;
         MPI_Comm below_comm;

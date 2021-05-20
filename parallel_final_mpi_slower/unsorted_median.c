@@ -5,6 +5,7 @@
 #include <float.h>
 #include "unsorted_median.h"
 #include "quicksort.h"
+#include <omp.h>
 
 /**
  * Compare function used inside quicksort
@@ -131,7 +132,7 @@ double median(double *vector, int n_items)
     double *medians = (double *)malloc(n_items/2 * sizeof(double));
     
     //printArray(vector, 17);
-    //#pragma omp parallel for if(n_items>900000)//(n_items>250000)
+    #pragma omp parallel for if(n_items>1000)
     for(int i=0; i<full_splits; i++)
     {
         medians[i] = sorted_median(vector + 5*i, 5);

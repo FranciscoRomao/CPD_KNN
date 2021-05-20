@@ -231,7 +231,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
     MPI_Comm_size(comm, &size_world);
     if(size_world>=2 && (n_points != 1 && n_points!=2))
     {   
-        if(rank==0){
+        /*if(rank==0){
         printf("Before comm:\n");
         printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
         print_pts(pts,n_points,n_dims);printf("\n");
@@ -241,7 +241,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
             print_pts(pts,n_points,n_dims);printf("\n");
             print_pjs(projections,n_points);printf("\n");
-        }
+        }*/
 
         MPI_Comm above_comm;
         MPI_Comm below_comm;

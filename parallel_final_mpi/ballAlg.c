@@ -81,10 +81,10 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
     int my_len;
     MPI_Get_processor_name(my_name, &my_len);
     //print_proc_name(my_name);
-    if (rank!=0 && (n_points == 1 || n_points==2)) //if the node is a leaf
+    /*if (rank!=0 && (n_points == 1 || n_points==2)) //if the node is a leaf
     {
         return;
-    }
+    }*/
     node foo;
 //if(rank==0){
     //flag(76,my_name);
@@ -323,6 +323,6 @@ int main(int argc, char *argv[])
     free(projections);
     free(pts_first_position);
     free(pts);
-    MPI_Finalize();
+    //MPI_Finalize();
     return 0;
 }

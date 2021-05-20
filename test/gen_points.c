@@ -78,7 +78,6 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_poi
     long np;
     long i;
     int j;
-    int k;
 
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &n_procs);
@@ -98,7 +97,6 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_poi
     }
 
     int full_split = (int) np/n_procs;
-    double lixo;
     int last_split = (int) full_split + np%n_procs;
     pt_arr = (double **)create_array_pts(n_dims, (long) last_split);
 
@@ -117,9 +115,8 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_poi
         {
             for (j = 0; j<n_dims; j++)
             {
-                lixo = (double)random();
+                (double)random();
             }
-            fflush(stdout);
         }
         for (i = 0; i<last_split; i++)
         {
@@ -136,7 +133,7 @@ double **get_points_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local_poi
         {
             for (j = 0; j<n_dims; j++)
             {
-                lixo = (double)random();
+                (double)random();
             }
         }
         
@@ -177,20 +174,15 @@ double* get_points_1dim_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local
     unsigned seed;
     int rank;
     int n_procs;
-    int n_dims;
     long np;
     long i;
-    int j;
-    int k;
 
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &n_procs);
-    
-    n_dims = atoi(argv[1]);
+
     np = atol(argv[2]);
 
     int full_split = (int) np/n_procs;
-    double lixo;
     int last_split = (int) full_split + np%n_procs;
 
     double* pt_arr = (double *)malloc(last_split*sizeof(double));
@@ -210,7 +202,7 @@ double* get_points_1dim_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local
     {
         for (i = 0; i<rank*full_split; i++)
         {
-            lixo = (double)random();
+            (double)random();
         }
 
         for (i = 0; i<last_split; i++)
@@ -223,7 +215,7 @@ double* get_points_1dim_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local
     {
         for (i = 0; i<rank*full_split; i++)
         {
-            lixo = (double)random();
+            (double)random();
         }
         
         for (i = 0; i<full_split; i++)
@@ -251,13 +243,8 @@ double* get_points_1dim_mpi(int argc, char *argv[], MPI_Comm comm, long* n_local
 double* get_points_1dim(int argc, char *argv[])
 {
     unsigned seed;
-    int rank;
-    int n_procs;
-    int n_dims;
     long np;
     long i;
-    int j;
-    int k;
 
     np = atol(argv[2]);
 
@@ -265,12 +252,6 @@ double* get_points_1dim(int argc, char *argv[])
 
     seed = atoi(argv[3]);
     srandom(seed);
-    
-    if (argc != 4 && rank == 0)
-    {
-        printf("Usage: %s <n_dims> <n_points> <seed>\n", argv[0]);
-        exit(1);
-    }
 
     for (i = 0; i<np; i++)
     {

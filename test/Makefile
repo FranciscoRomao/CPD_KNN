@@ -2,21 +2,19 @@ MAIN = mpi_medians.c
 
 TARGET = ballAlg
 
-OBJS = 
-
 FLAGS = -O3 -fopenmp -lm
 debugFLAGS = -fopenmp -g -lm -Wall
 
 all: ballAlg
 
-$(TARGET): gen_points.o unsorted_median.o
-	mpicc $(MAIN)  $^ -o $@ $(FLAGS)
+$(TARGET): $(MAIN) gen_points.o unsorted_median.o
+	mpicc $(debugFLAGS)  $^ -o $@ $(debugFLAGS)
 
 gen_points.o: gen_points.c
-	mpicc $^ -c $(FLAGS)
+	mpicc $^ -c $(debugFLAGS)
 
 unsorted_median.o: unsorted_median.c
-	mpicc $^ -c $(FLAGS)
+	mpicc $^ -c $(debugFLAGS)
 
 # $^ - representa as dependencias do comando
 # $@ - representa o ficheiro de saida do comando

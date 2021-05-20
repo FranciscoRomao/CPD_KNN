@@ -9,9 +9,10 @@
 
 #define SAMPLE 3
 
+#define DEBUG
+
 int main(int argc, char *argv[])
 {
-    double exec_time;
     double* pts;
     double* pts_test;
     long n_points = atol(argv[2]);;
@@ -27,23 +28,25 @@ int main(int argc, char *argv[])
     if(n_procs * SAMPLE > n_points)
     {
         if(!rank)
+        {
             printf("Isto tem de ser implementado para correr numa máquina só, porque senão dá bugada\n"); fflush(stdout);
+        }
         return -1;
     }
     
     pts = get_points_1dim_mpi(argc, argv, MPI_COMM_WORLD, &n_points);
 
 
-    if(!rank)
-    {
-        pts_test = get_points_1dim(argc, argv);
-        //printf("pontos gerados\n");
-        //printArray(pts_test, n_points_test);
-        printf("-------------------------Mediana real: %lf\n", medianSort(pts_test, n_points_test));
-        fflush(stdout);
-    }
-    
-    double median;
+    #ifdef DEBUG
+        if(!rank)
+        {
+            pts_test = get_points_1dim(argc, argv);
+            //printf("pontos gerados\n");
+            //printArray(pts_test, n_points_test);
+            printf("#-------------------------Mediana real: %lf\n", medianSort(pts_test, n_points_test));
+            fflush(stdout);
+        }
+    #endif
 
     //pseudo-projection of all points (enough to know relative positions)
 
@@ -61,13 +64,11 @@ int main(int argc, char *argv[])
 	*/
 	
 	//median = getKsmallest(pts, n_points/2 , n_points);
-
-
+    MPI_Barrier(MPI_COMM_WORLD);
     PSRS(pts, n_points);
 
     //printf("FIMMMMMM, rank %d\n", rank);
     //fflush(stdout);
-
     MPI_Finalize();
 
     //free(pts);

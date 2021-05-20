@@ -1,0 +1,8 @@
+lab13p2 slots=1
+lab13p3 slots=1
+lab13p4 slots=1
+lab13p5 slots=1
+lab13p7 slots=1
+lab13p8 slots=1
+lab13p9 slots=1
+lab13p10 slots=1

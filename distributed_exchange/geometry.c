@@ -70,26 +70,35 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
     return idx_newpt;
 }
 
-
 /**
- * Computes the two points furthest apart in the set 
+ * Computes the two points furthest apart in the set in two g
  * (might get local solution but it is not relevant for the problem)
  * @param n_dims   # of dimensions
  * @param n_points # of points 
  * @param **pts array with the points
  * @param *idx_fp 
  */
-void recursive_furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp)
+void furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp)
 {
-    long idx_new_fp = 0;
+    idx_fp[0] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
+    idx_fp[1] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
 
-    idx_new_fp = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
-    if (idx_new_fp != idx_fp[1])
-    {
-        idx_fp[1] = idx_fp[0];
-        idx_fp[0] = idx_new_fp;
-        recursive_furthest_apart(n_dims, n_points, pts, idx_fp);
-    }
+    return;
+}
+
+/**
+ * Computes the two points furthest apart in the set in two g
+ * (might get local solution but it is not relevant for the problem)
+ * @param n_dims   # of dimensions
+ * @param n_points # of points 
+ * @param **pts array with the points
+ * @param *idx_fp 
+ */
+void furthest_apart_distributed(int n_dims, long n_points, double **pts, long *idx_fp)
+{
+    idx_fp[0] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
+    idx_fp[1] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
+
     return;
 }
 

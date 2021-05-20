@@ -65,10 +65,8 @@ void print_Node(node foo, int n_dims)
 
         printf(" \n");
     }
-    fflush(stdout);
     return;
 }
-
 
 void build_tree(long node_id, double **pts, double* projections, long n_points, int n_dims, MPI_Comm comm, int rank, long start_npoints)
 {   
@@ -293,6 +291,7 @@ int main(int argc, char *argv[])
     double **pts;
     int n_dims = atoi(argv[1]); //number of dimensions
     long n_points = atoi(argv[2]); //number of points in the set
+    double* _p_arr;
     //____________START_TIME_BENCHMARK_____________ 
     exec_time = -omp_get_wtime();
 

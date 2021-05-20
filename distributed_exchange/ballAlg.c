@@ -69,7 +69,7 @@ void print_Node(node foo, int n_dims)
 }
 
 
-void build_tree(long node_id, double **pts, double* projections, long n_points, int n_dims, MPI_Comm comm, int rank, long start_npoints)
+void build_tree(long node_id, double **pts, double* projections, long n_points, int n_dims, MPI_Comm comm, int rank, long start_npoints, int distributed)
 {   
     long lnode_id;
     long rnode_id;
@@ -141,85 +141,158 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             //flag(115,my_name);
             //build leafs
             print_Node(foo,n_dims);
-            build_tree(lnode_id, pts, NULL, 1, n_dims,comm,rank,start_npoints); //center_idx happens to be the number of points in the set
-            build_tree(rnode_id,pts+1, NULL, 1, n_dims,comm,rank,start_npoints);
+            build_tree(lnode_id, pts, NULL, 1, n_dims,comm,rank,start_npoints,0); //center_idx happens to be the number of points in the set
+            build_tree(rnode_id,pts+1, NULL, 1, n_dims,comm,rank,start_npoints,0);
             return;
         }
         else // > 2 points in the set
-        {
-            long median_idx; //indice of the median
-            double median; //value of the median
-            long idx_fp[2] = {0, 0}; // indices of the points furthest apart
-            double radius_candidate[2] = {0, 0}; //possible radius
-            
-            //compute furthest apart points in the current set
-            recursive_furthest_apart(n_dims, n_points, pts, idx_fp); 
-            //pseudo-projection of all points (enough to know relative positions) 
-            project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
-            //flag(136,my_name);
-    
-            if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
-            {   
-                long median_left_idx; //indice of the immediatly smaller value than the median
-                long median_right_idx; //indice of the immediatly bigger value than the median
-                double median_left; //immediatly smaller value than the median
-                double median_right; //immediatly bigger value than the median
+        {   
+            if(!distributed){
+                long median_idx; //indice of the median
+                double median; //value of the median
+                long idx_fp[2] = {0, 0}; // indices of the points furthest apart
+                double radius_candidate[2] = {0, 0}; //possible radius
+                
+                //compute furthest apart points in the current set
+                furthest_apart(n_dims, n_points, pts, idx_fp);
+                //pseudo-projection of all points (enough to know relative positions) 
+                project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
+                //flag(136,my_name);
+        
+                if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
+                {   
+                    long median_left_idx; //indice of the immediatly smaller value than the median
+                    long median_right_idx; //indice of the immediatly bigger value than the median
+                    double median_left; //immediatly smaller value than the median
+                    double median_right; //immediatly bigger value than the median
 
-                //compute median as the avergae of the two central pts
-                median_right = getKsmallest(projections, n_points/2 , n_points);
-                median_right_idx = find_idx_from_value(projections, n_points, median_right);
-                median_left_idx = getLowerNeighborIdx(projections, n_points, median_right);
-                median_left = projections[median_left_idx];
-                median = (median_left + median_right) / 2;
-                //compute and set center of the node
-                double* center_l=(double*)malloc(n_dims*sizeof(double));
-                double* center_r=(double*)malloc(n_dims*sizeof(double));
-                orthogonal_projection(n_dims, pts[median_left_idx], pts[idx_fp[0]], pts[idx_fp[1]], center_l);
-                orthogonal_projection(n_dims, pts[median_right_idx], pts[idx_fp[0]], pts[idx_fp[1]], center_r);
-                //flag(156,my_name);
-                for(int i=0; i<n_dims; i++)
-                {
-                    foo.center[i] = (center_l[i] + center_r[i]) / 2;
+                    //compute median as the avergae of the two central pts
+                    median_right = getKsmallest(projections, n_points/2 , n_points);
+                    median_right_idx = find_idx_from_value(projections, n_points, median_right);
+                    median_left_idx = getLowerNeighborIdx(projections, n_points, median_right);
+                    median_left = projections[median_left_idx];
+                    median = (median_left + median_right) / 2;
+                    //compute and set center of the node
+                    double* center_l=(double*)malloc(n_dims*sizeof(double));
+                    double* center_r=(double*)malloc(n_dims*sizeof(double));
+                    orthogonal_projection(n_dims, pts[median_left_idx], pts[idx_fp[0]], pts[idx_fp[1]], center_l);
+                    orthogonal_projection(n_dims, pts[median_right_idx], pts[idx_fp[0]], pts[idx_fp[1]], center_r);
+                    //flag(156,my_name);
+                    for(int i=0; i<n_dims; i++)
+                    {
+                        foo.center[i] = (center_l[i] + center_r[i]) / 2;
+                    }
+                    free(center_l);
+                    free(center_r);           
+                    //place pts which projection is smaller than the median to left half of the array and greater to right half 
+                    compare_with_median(projections, pts, median, n_points);
+                    center_idx = (n_points / 2);
+
                 }
-                free(center_l);
-                free(center_r);           
-                //place pts which projection is smaller than the median to left half of the array and greater to right half 
-                compare_with_median(projections, pts, median, n_points, n_dims);
-                center_idx = (n_points / 2);
+                else //odd n_pts -> median is the central value
+                {   
+                    //compute median
+                    median = getKsmallest(projections, n_points/2, n_points);
 
+                    median_idx = find_idx_from_value(projections, n_points, median);
+                    //flag(174,my_name);
+                    //compute and set center of the node
+                    orthogonal_projection(n_dims, pts[median_idx], pts[idx_fp[0]], pts[idx_fp[1]], foo.center);
+
+                    compare_with_median(projections, pts, median, n_points);
+
+                    center_idx = (n_points - 1) / 2;
+                }
+
+                //compute the furthest point of the ball center and thus the radius
+                radius_candidate[0] = distance(n_dims, pts[idx_fp[0]], foo.center);
+                radius_candidate[1] = distance(n_dims, pts[idx_fp[1]], foo.center);
+
+                if (radius_candidate[1]>radius_candidate[0]) 
+                {
+                    foo.radius = radius_candidate[1];
+                }
+                else 
+                {
+                    foo.radius = radius_candidate[0];
+                }
+                //flag(195,my_name);
+                rnode_id = node_id + 2 * center_idx;
+                foo.R = rnode_id;
+                print_Node(foo,n_dims);
+                //flag(201,my_name);
             }
-            else //odd n_pts -> median is the central value
-            {   
-                //compute median
-                median = getKsmallest(projections, n_points/2, n_points);
+            else if(distributed){
+                long median_idx; //indice of the median
+                double median; //value of the median
+                long idx_fp[2] = {0, 0}; // indices of the points furthest apart
+                double radius_candidate[2] = {0, 0}; //possible radius
+                
+                double * fp1 =malloc(n_dims*sizeof(double));
+                double * fp2 =malloc(n_dims*sizeof(double));
+                //compute furthest apart points in the current set
+                furthest_apart_distributed(n_dims, n_points, pts, idx_fp); 
+                //pseudo-projection of all points (enough to know relative positions) 
+                project_pts2line(n_dims, projections, fp1, fp2, pts, n_points);
+                //flag(136,my_name);
+                median=PSRS(pts,n_points);
+                if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
+                {   
+                    long median_left_idx; //indice of the immediatly smaller value than the median
+                    long median_right_idx; //indice of the immediatly bigger value than the median
+                    double median_left; //immediatly smaller value than the median
+                    double median_right; //immediatly bigger value than the median
 
-                median_idx = find_idx_from_value(projections, n_points, median);
-                //flag(174,my_name);
-                //compute and set center of the node
-                orthogonal_projection(n_dims, pts[median_idx], pts[idx_fp[0]], pts[idx_fp[1]], foo.center);
+                    //compute median as the avergae of the two central pts
+                    median_right = getKsmallest(projections, n_points/2 , n_points);
+                    median_right_idx = find_idx_from_value(projections, n_points, median_right);
+                    median_left_idx = getLowerNeighborIdx(projections, n_points, median_right);
+                    median_left = projections[median_left_idx];
+                    median = (median_left + median_right) / 2;
+                    //compute and set center of the node
+                    double* center_l=(double*)malloc(n_dims*sizeof(double));
+                    double* center_r=(double*)malloc(n_dims*sizeof(double));
+                    orthogonal_projection(n_dims, pts[median_left_idx], pts[idx_fp[0]], pts[idx_fp[1]], center_l);
+                    orthogonal_projection(n_dims, pts[median_right_idx], pts[idx_fp[0]], pts[idx_fp[1]], center_r);
+                    //flag(156,my_name);
+                    for(int i=0; i<n_dims; i++)
+                    {
+                        foo.center[i] = (center_l[i] + center_r[i]) / 2;
+                    }
+                    free(center_l);
+                    free(center_r);           
+                    //place pts which projection is smaller than the median to left half of the array and greater to right half 
+                    compare_with_median(projections, pts, median, n_points);
+                    center_idx = (n_points / 2);
 
-                compare_with_median(projections, pts, median, n_points,n_dims);
+                }
+                else //odd n_pts -> median is the central value
+                {   
+                    
+                    //flag(174,my_name);
+                    //compute and set center of the node
+                    orthogonal_projection(n_dims, pts[median_idx], fp1, fp2, foo.center);
 
-                center_idx = (n_points - 1) / 2;
+                }
+
+                //compute the furthest point of the ball center and thus the radius
+                radius_candidate[0] = distance(n_dims, fp1, foo.center);
+                radius_candidate[1] = distance(n_dims, fp2, foo.center);
+
+                if (radius_candidate[1]>radius_candidate[0]) 
+                {
+                    foo.radius = radius_candidate[1];
+                }
+                else 
+                {
+                    foo.radius = radius_candidate[0];
+                }
+                //flag(195,my_name);
+                rnode_id = node_id + 2 * center_idx;
+                foo.R = rnode_id;
+                print_Node(foo,n_dims);
+                //flag(201,my_name);
             }
-
-            //compute the furthest point of the ball center and thus the radius
-            radius_candidate[0] = distance(n_dims, pts[idx_fp[0]], foo.center);
-            radius_candidate[1] = distance(n_dims, pts[idx_fp[1]], foo.center);
-
-            if (radius_candidate[1]>radius_candidate[0]) 
-            {
-                foo.radius = radius_candidate[1];
-            }
-            else 
-            {
-                foo.radius = radius_candidate[0];
-            }
-            //flag(195,my_name);
-            rnode_id = node_id + 2 * center_idx;
-            foo.R = rnode_id;
-            print_Node(foo,n_dims);
-            //flag(201,my_name);
         }
     }
 
@@ -227,35 +300,19 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
     MPI_Comm_size(comm, &size_world);
     if(size_world>=2 && (n_points != 1 && n_points!=2))
     {   
-        MPI_Bcast(pts[0],start_npoints*n_dims,MPI_DOUBLE,0,comm);
-        MPI_Bcast(projections,start_npoints,MPI_DOUBLE,0,comm);
-        MPI_Bcast(&rnode_id,1,MPI_LONG,0,comm);
-        MPI_Bcast(&lnode_id,1,MPI_LONG,0,comm);
-        MPI_Bcast(&center_idx,1,MPI_LONG,0,comm);
-        MPI_Bcast(&n_points,1,MPI_LONG,0,comm);
-        /*if(rank==0){
-        printf("Before comm:\n");
-        printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
-        print_pts(pts,n_points,n_dims);printf("\n");
-        print_pjs(projections,n_points);printf("\n");}
-        else{
-            printf("After comm:\n");
-            printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
-            print_pts(pts,n_points,n_dims);printf("\n");
-            print_pjs(projections,n_points);printf("\n");
-        }*/
-
         MPI_Comm above_comm;
         MPI_Comm below_comm;
         int above_median=(((double)rank/size_world)>=0.5)?1:0;
         //printf("above median:%d rank:%d\n",above_median,rank);
+        int distributed;
         int new_rank;
         if(above_median)
         {   
             MPI_Comm_split(comm, 0, 0, &below_comm);
             MPI_Comm_rank(below_comm, &new_rank);
             //printf("NEW_RANK: %d above\n", new_rank);
-            build_tree(lnode_id, pts, projections, center_idx, n_dims,below_comm,new_rank,start_npoints); //center_idx happens to be the number of points in the set
+            distributed=(size_world>=2&&n_points>2)?1:0;
+            build_tree(lnode_id, pts, projections, center_idx, n_dims,below_comm,new_rank,start_npoints,distributed); //center_idx happens to be the number of points in the set
         }
         else
         {  
@@ -263,7 +320,8 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             MPI_Comm_split(comm, 1, 0, &above_comm);
             MPI_Comm_rank(above_comm, &new_rank);
             //printf("NEW_RANK: %d below\n", new_rank);
-            build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,above_comm,new_rank,start_npoints);
+            distributed=(size_world>=2&&n_points>2)?1:0;
+            build_tree(rnode_id,pts, projections, n_points - center_idx, n_dims,above_comm,new_rank,start_npoints,distributed);
         }
     }
     else
@@ -272,8 +330,8 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
         print_pts(pts,n_points,n_dims);printf("\n");
         print_pjs(projections,n_points);printf("\n");*/
-        build_tree(lnode_id,pts, projections, center_idx, n_dims,comm,rank,start_npoints); //center_idx happens to be the number of points in the set
-        build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,comm,rank,start_npoints);
+        build_tree(lnode_id,pts, projections, center_idx, n_dims,comm,rank,start_npoints,0); //center_idx happens to be the number of points in the set
+        build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,comm,rank,start_npoints,0);
     }
         
     return;
@@ -296,26 +354,22 @@ int main(int argc, char *argv[])
     //____________START_TIME_BENCHMARK_____________ 
     exec_time = -omp_get_wtime();
 
+    MPI_Comm comm = MPI_COMM_WORLD;
     //generates dataset
-    if(rank==0)
-        pts = get_points(argc, argv);
-    else{
-        _p_arr = (double *)malloc(n_dims * n_points * sizeof(double));
-        pts = (double **)malloc(n_points * sizeof(double *));
-        for (long i = 0; i < n_points; i++)
-        pts[i] = &_p_arr[i * n_dims];
-    }
+    long n_local_points=0;
+    pts = get_points_mpi(argc, argv,comm,&n_local_points);
+
     double* pts_first_position = pts[0];
 
-
-    double* projections = (double*)malloc(n_points*sizeof(double)); //array to store pseudo-projections the locate the point in the line 
-    long n_nodes = 2 * n_points - 1; //number of nodes in the tree
-
-    if(rank==0)
-        printf("%d %ld\n", n_dims, n_nodes);
+    double* projections = (double*)malloc(n_local_points*sizeof(double)); //array to store pseudo-projections the locate the point in the line 
     
-    MPI_Comm comm = MPI_COMM_WORLD;
-    build_tree(0, pts, projections, n_points, n_dims, comm ,rank,n_points);
+    if(rank==0)
+    {   
+        long n_nodes = 2 * n_points - 1; //number of nodes in the tree
+        printf("%d %ld\n", n_dims, n_nodes);
+    }
+
+    build_tree(0, pts, projections, n_points, n_dims, comm ,rank,n_points,1);
 
     //____________END_TIME_BENCHMARK_____________
     MPI_Barrier(MPI_COMM_WORLD);

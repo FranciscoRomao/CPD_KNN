@@ -263,9 +263,6 @@ double PSRS(double* vector, long n_items)
     double aux2_db;
     int* aux_vector = (int*)malloc(n_procs*2*sizeof(int));
     checkMalloc(aux_vector, 6);
-
-    printf("Init vector, rank: %d with %ld elems\n", rank, n_items);
-    fflush(stdout);
     
     #ifdef DEBUG_Lv1
         MPI_Barrier(MPI_COMM_WORLD);
@@ -279,11 +276,6 @@ double PSRS(double* vector, long n_items)
     //Each processor finds its samples to send to root(rank = 0)
     for(i=0; i<n_sample; i++)
     {
-        if(!rank)
-        {
-            printf("Buscar sample: %ld\n", ((double)(n_items/n_sample)*i));
-            fflush(stdout);
-        }
         sample[i] = getKsmallest(vector, (n_items/n_sample)*i, n_items);
         #ifdef DEBUG_Lv1
             printf("Sample %d = %lf, rank %d\n", i, sample[i], rank);
@@ -428,9 +420,6 @@ double PSRS(double* vector, long n_items)
             elems_recvd = appendArray(finalVector, elems_recvd, partitions2recv[i], n_to_recv, IGNORE_NUM);
         }
     }
-
-    printf("Vetor de %d valores finais do rank %d completo\n", elems_recvd, rank);
-    fflush(stdout);
     
     #ifdef DEBUG_Lv1
         //MPI_Barrier(MPI_COMM_WORLD);
@@ -628,67 +617,6 @@ long getLowerNeighborIdx(double* vector, long n_items, double result)
     }
 
     return neighbor_idx;
-}
-
-
-/**
- * Reorders the vectors projections and *pts. The left set has all the points with values of the projections
- * lower than the median and the right set has all the points higher than the median. The *pts array is swapped
- * acordingly to the projections array
- * @param   projections Reference array to reorder the arrays
- * @param   pts         Array to be swapped acordingly
- * @param   median      Median to use to separate the projections vector
- * @param   n_points    Number of elements on the array
- */
-void compare_with_median(double* projections, double** pts, double median, long n_points)
-{
-    long left_pivot = 0;
-    long right_pivot = n_points -1;
-    long points_remaining;
-    double aux;
-    double* aux_pt;
-
-    while (left_pivot < right_pivot) {
-       if (projections[left_pivot] >= median) {
-           if (projections[right_pivot] < median)
-           {
-                aux = projections[right_pivot];
-                projections[right_pivot] = projections[left_pivot];
-                projections[left_pivot] = aux;
-
-                aux_pt = pts[right_pivot];
-                pts[right_pivot] = pts[left_pivot];
-                pts[left_pivot] = aux_pt;
-            } else {
-               right_pivot--;
-           }
-       } else {
-           left_pivot++;
-       }
-    }
-
-    points_remaining = n_points/2 - left_pivot;
-    if (points_remaining == 0)
-        return;
-
-    for(int i=left_pivot; i<n_points; i++)
-    {
-        if(projections[i] == median)
-        {
-            aux = projections[left_pivot];
-            projections[left_pivot] = projections[i];
-            projections[i] = aux;
-
-            aux_pt = pts[right_pivot];
-            pts[right_pivot] = pts[left_pivot];
-            pts[left_pivot] = aux_pt;
-            
-            left_pivot++;
-            points_remaining--;
-            if (points_remaining == 0)
-                break;
-        }
-    }
 }
 
 /**

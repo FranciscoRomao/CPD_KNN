@@ -7,6 +7,8 @@
 #include "unsorted_median.h"
 #include <string.h>
 
+#define PRINT_NODES
+
 void flag (int x, char* name)
 {   
     printf("%d %s\n", x, name);
@@ -96,8 +98,10 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         //flag(77,my_name);
         foo.center = pts[0];
         //flag(78,my_name);
-        if(rank==0)
-            print_Node(foo,n_dims);
+        #ifdef PRINT_NODE
+            if(rank==0)
+                print_Node(foo,n_dims);
+        #endif
         //flag(79,my_name);
         return;
     }
@@ -140,9 +144,11 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         //printf("radius:%lf\n",foo.radius);
         //flag(115,my_name);
         //build leafs
-        if(rank==0)
-            print_Node(foo,n_dims);
-        
+        #ifdef PRINT_NODE
+            if(rank==0)
+                print_Node(foo,n_dims);
+        #endif
+
         build_tree(lnode_id, pts, NULL, 1, n_dims,comm,rank,start_npoints,threads_available); //center_idx happens to be the number of points in the set
         build_tree(rnode_id,pts+1, NULL, 1, n_dims,comm,rank,start_npoints,threads_available);
         return;
@@ -220,8 +226,10 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         //flag(195,my_name);
         rnode_id = node_id + 2 * center_idx;
         foo.R = rnode_id;
-        if(rank==0)
-            print_Node(foo,n_dims);
+        #ifdef PRINT_NODE
+            if(rank==0)
+                print_Node(foo,n_dims);
+        #endif
         //flag(201,my_name);
     }
 //}

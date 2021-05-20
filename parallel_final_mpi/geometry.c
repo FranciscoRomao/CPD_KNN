@@ -2,7 +2,21 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "geometry.h"
+#include <omp.h>
+#include <mpi.h>
 
+typedef struct max_n_idx
+{
+    double maximum;
+    long int index; 
+}max_n_idx;
+
+max_n_idx max_n_idx_max(max_n_idx a, max_n_idx b)
+{
+    return a.maximum > b.maximum ? a : b; 
+}
+
+#pragma omp declare reduction(max_n_idx_max_: struct max_n_idx: omp_out=max_n_idx_max(omp_out, omp_in))
 /**
 * Computes euclidean distance
  * @param *a point a
@@ -42,54 +56,57 @@ double squared_distance(int n_dims, double *a, double *b)
 
 /**
  * Computes the furthest point in the set from a defined point
- * @param n_dims number of dimensions
- * @param n_point number of points in the set
- * @param **pts set of the points
- * @param coordinates of the point to search from
+ * @param   n_dims              number of dimensions
+ * @param   n_point             number of points in the set
+ * @param   pts                 **pts set of the points
+ * @param   base_coords         of the point to search from
+ * @param   threads_available   Number of threads available
  */
-long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords)
+long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords, int threads_available)
 {
-    double max_dist = -1, curr_dist = 0;
-    long idx_newpt = 0;
+    double curr_dist = 0;
+    max_n_idx max_point={-1.0,-1};
 
-    //#pragma if(n_points==1000000) omp for reduction(max:max_dist) //if(n_points>250000)
-    for (long i = 0; i < n_points; i++)
-    {   
-        if(n_points==1000000){
-            //printf("omp_get_num_threads(): %d\n",omp_get_num_threads());
-            //printf("omp_get_max_threads(): %d\n",omp_get_max_threads());
-            //printf("omp_get_thread_num(): %d\n",omp_get_thread_num());
+    if (threads_available > 1)
+    {
+        #pragma omp parallel for reduction(max_n_idx_max_:max_point) 
+        for (long i = 0; i < n_points; i++)
+        {   
+            if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)
+            {
+                max_point.maximum = curr_dist;
+                max_point.index = i;
+            }
         }
-        if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_dist)
-        {
-            max_dist = curr_dist;
-            idx_newpt = i;
-        }
-        
     }
-    return idx_newpt;
+    else 
+    {
+        for (long i = 0; i < n_points; i++)
+        {   
+            if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)
+            {
+                max_point.maximum = curr_dist;
+                max_point.index = i;
+            }
+        }
+    }
+    return max_point.index;
 }
 
 
 /**
- * Computes the two points furthest apart in the set 
+ * Computes the two points furthest apart in the set in two g
  * (might get local solution but it is not relevant for the problem)
  * @param n_dims   # of dimensions
  * @param n_points # of points 
  * @param **pts array with the points
  * @param *idx_fp 
  */
-void recursive_furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp)
+void furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp, int threads_available)
 {
-    long idx_new_fp = 0;
+    idx_fp[0] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]], threads_available);
+    idx_fp[1] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]], threads_available);
 
-    idx_new_fp = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
-    if (idx_new_fp != idx_fp[1])
-    {
-        idx_fp[1] = idx_fp[0];
-        idx_fp[0] = idx_new_fp;
-        recursive_furthest_apart(n_dims, n_points, pts, idx_fp);
-    }
     return;
 }
 
@@ -206,18 +223,19 @@ void orthogonal_projection(int n_dims, double *p, double *a, double *b, double* 
     return;
 }
 
-/**Given a list of points with multiple dimensions this function computes the reduced orthogonal projections
- * for all the points 
- * n_dims: # of dimensions
- * p : point to project
- * a : first points of the line
- * p_minus_a : point p subtracted by point a
- * b_minus_a : point b (end of line) subtracted by point a
- * [return] : result
+/**
+ * Given a list of points this function computes the reduced projections of every point and saves it on the projections array
+ * @param   n_dims              # of dimensions
+ * @param   projections         # of dimensions
+ * @param   a                   first point of the line
+ * @param   a                   second point of the line
+ * @param   pts                 list of points
+ * @param   n_points            # number of points
+ * @param   threads_available   Number of threads available
+ * @return  result
  */
-void project_pts2line(int n_dims, double* projections, double *a, double *b, double **pts, long n_points)
+void project_pts2line(int n_dims, double* projections, double *a, double *b, double **pts, long n_points, int threads_available)
 {
-    double *p_minus_a = (double *)malloc(n_dims * sizeof(double));
     double *b_minus_a = (double *)malloc(n_dims * sizeof(double));
     
     if(a[0]>b[0])
@@ -225,14 +243,36 @@ void project_pts2line(int n_dims, double* projections, double *a, double *b, dou
     else
         subtraction(n_dims, a, b, b_minus_a);
     
+    if(threads_available > 1)
+    {
+        double **p_minus_a = (double**) malloc(sizeof(double*) * omp_get_max_threads());
+        
+        for(int i = 0; i < omp_get_max_threads(); i++)
+        {
+            p_minus_a[i] = (double *)malloc(n_dims * sizeof(double));
+        }
 
-    //#pragma omp parallel for if(n_points>900000)//if(n_points>250000)
-    for (int i = 0; i < n_points; i++)
-    {   
-        projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
+        #pragma omp parallel for
+        for (int i = 0; i < n_points; i++)
+        {   
+            projections[i] = orthogonal_projection_reduced(n_dims, pts[i], a, p_minus_a[omp_get_thread_num()%omp_get_max_threads()], b_minus_a);
+        }
+        
+        for(int i = 0; i < omp_get_max_threads(); i++)
+            free(p_minus_a[i]);
+        
+        free(p_minus_a);
+    }
+    else
+    {
+        double* p_minus_a = (double *)malloc(n_dims * sizeof(double));
+        for (int i = 0; i < n_points; i++)
+        {   
+            projections[i] = orthogonal_projection_reduced(n_dims, pts[i],a,p_minus_a,b_minus_a);
+        }
+        free(p_minus_a);
     }
 
-    free(p_minus_a);
     free(b_minus_a);
     
     return;

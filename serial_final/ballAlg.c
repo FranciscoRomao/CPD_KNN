@@ -211,10 +211,11 @@ int main(int argc, char *argv[])
     // construct THE TREE
     build_tree(tree, 0, pts, projections, n_points, n_dims);
 
+    dump_tree(tree, n_dims, n_points,n_nodes);
+    
     //____________END_TIME_BENCHMARK_____________
     exec_time += omp_get_wtime();
-
-    dump_tree(tree, n_dims, n_points,n_nodes);
+    
     destroy_tree(n_nodes,tree);
     free(projections);
     free(pts_first_position);

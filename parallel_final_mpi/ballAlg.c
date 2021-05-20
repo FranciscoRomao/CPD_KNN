@@ -75,9 +75,9 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
     long lnode_id;
     long rnode_id;
     long center_idx; //indice of the center of the pts array where the split for the childs is made
-    char my_name[MPI_MAX_PROCESSOR_NAME];
-    int my_len;
-    MPI_Get_processor_name(my_name, &my_len);
+    //char my_name[MPI_MAX_PROCESSOR_NAME];
+    //int my_len;
+    //MPI_Get_processor_name(my_name, &my_len);
     //print_proc_name(my_name);
     /*if (rank!=0 && (n_points == 1 || n_points==2)) //if the node is a leaf
     {
@@ -142,6 +142,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         //build leafs
         if(rank==0)
             print_Node(foo,n_dims);
+        
         build_tree(lnode_id, pts, NULL, 1, n_dims,comm,rank,start_npoints,threads_available); //center_idx happens to be the number of points in the set
         build_tree(rnode_id,pts+1, NULL, 1, n_dims,comm,rank,start_npoints,threads_available);
         return;
@@ -227,7 +228,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
 
     int size_world;
     MPI_Comm_size(comm, &size_world);
-    if(size_world>=2 && (n_points != 1 && n_points!=2))
+    if(size_world>=2)
     {   
         /*if(rank==0){
         printf("Before comm:\n");
@@ -247,23 +248,23 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         //printf("above median:%d rank:%d\n",above_median,rank);
         int new_rank;
         if(above_median)
-        {   
+        {
             MPI_Comm_split(comm, 0, 0, &below_comm);
             MPI_Comm_rank(below_comm, &new_rank);
             //printf("NEW_RANK: %d above\n", new_rank);
-            build_tree(lnode_id, pts, projections, center_idx, n_dims,below_comm,new_rank,start_npoints,threads_available); //center_idx happens to be the number of points in the set
+            build_tree(lnode_id, pts, projections, center_idx, n_dims, below_comm, new_rank, start_npoints, threads_available); //center_idx happens to be the number of points in the set
         }
         else
-        {  
+        {
             //printf("splitting below!\n");
             MPI_Comm_split(comm, 1, 0, &above_comm);
             MPI_Comm_rank(above_comm, &new_rank);
             //printf("NEW_RANK: %d below\n", new_rank);
-            build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,above_comm,new_rank,start_npoints,threads_available);
+            build_tree(rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, above_comm, new_rank, start_npoints, threads_available);
         }
     }
     else
-    {   
+    {
         /*printf("Before comm:\n");
         printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
         print_pts(pts,n_points,n_dims);printf("\n");
@@ -279,11 +280,12 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
 int main(int argc, char *argv[])
 {   
     MPI_Init(&argc, &argv); /*START MPI */
-    int rank, size, name_len;
-    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int rank, size;
+    //int name_len;
+    //char processor_name[MPI_MAX_PROCESSOR_NAME];
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); /*DETERMINE RANK OF THIS PROCESSOR*/
     MPI_Comm_size(MPI_COMM_WORLD, &size); /*DETERMINE TOTAL NUMBER OF PROCESSORS*/
-    MPI_Get_processor_name(processor_name, &name_len);
+    //MPI_Get_processor_name(processor_name, &name_len);
     double exec_time;
     double **pts;
     int n_dims = atoi(argv[1]); //number of dimensions
@@ -295,7 +297,6 @@ int main(int argc, char *argv[])
     pts = get_points(argc, argv);
 
     double* pts_first_position = pts[0];
-
 
     double* projections = (double*)malloc(n_points*sizeof(double)); //array to store pseudo-projections the locate the point in the line 
     long n_nodes = 2 * n_points - 1; //number of nodes in the tree

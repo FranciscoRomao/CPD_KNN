@@ -115,7 +115,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
     foo.center = (double *)malloc(n_dims * sizeof(double));
 
     if(n_points == 2) //only two points in the set -> easier/lesser operations
-    {  
+    {
         center_idx = 1;
         rnode_id = node_id + 2 * center_idx;
         foo.R = rnode_id;
@@ -147,6 +147,8 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             if(rank==0)
                 print_Node(foo,n_dims);
         #endif
+
+        free(foo.center);
 
         build_tree(lnode_id, pts, NULL, 1, n_dims,comm,rank,start_npoints,threads_available); //center_idx happens to be the number of points in the set
         build_tree(rnode_id,pts+1, NULL, 1, n_dims,comm,rank,start_npoints,threads_available);
@@ -220,6 +222,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             if(rank==0)
                 print_Node(foo,n_dims);
         #endif
+        free(foo.center);
     }
 
     int size_world;
@@ -388,7 +391,7 @@ int main(int argc, char *argv[])
 
     if(rank==0)
     {
-        fprintf(stderr, "%.1lf\n", exec_time);
+        //fprintf(stderr, "%.1lf\n", exec_time);
         fprintf(stderr, "That took %.1lf seconds\n", endtime-starttime);
     }
     

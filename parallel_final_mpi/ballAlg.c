@@ -309,8 +309,8 @@ int main(int argc, char *argv[])
     double* projections = (double*)malloc(n_points*sizeof(double)); //array to store pseudo-projections the locate the point in the line 
     long n_nodes = 2 * n_points - 1; //number of nodes in the tree
 
-    if(rank==0)
-        printf("%d %ld\n", n_dims, n_nodes);
+    //if(rank==0)
+    //    printf("%d %ld\n", n_dims, n_nodes);
     
     MPI_Comm comm = MPI_COMM_WORLD;
     int threads_available =omp_get_max_threads();

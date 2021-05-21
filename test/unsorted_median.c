@@ -212,7 +212,6 @@ int vectorSum(int* vector, int n)
 */
 double PSRS(double* vector, long n_items)
 {
-    
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &n_procs);
 
@@ -569,7 +568,8 @@ double PSRS(double* vector, long n_items)
         }
     }
     
-    //Todos menos o rank 0 vão fazer return de 0. O rank 0 faz return da mediana
+    //Facilmente se faz um broadcast e todos retornam a mediana
+    //Todos menos o rank 0 vão fazer return de 0. O rank 0 faz return da mediana.
     return 0;
 }
 

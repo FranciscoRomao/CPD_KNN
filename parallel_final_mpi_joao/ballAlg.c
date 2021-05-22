@@ -41,6 +41,12 @@ void print_Node(node* foo, int n_dims)
     return;
 }
 
+/**
+ * Prints node vector
+ * @param vector : Vector of pointers to nodes
+ * @param n_dims : # of dimensions
+ * @param n_nodes: Total number of nodes 
+ */
 void print_Nodes(node** vector, int n_dims, long n_nodes)
 {
     for(int i=0; i<n_nodes; i++)
@@ -105,6 +111,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         {
             foo->center[i] = (pts[0][i] + pts[1][i]) / 2;
         }
+
         //both points are equidistant to the center
         foo->radius = distance(n_dims, pts[0], foo->center);
         
@@ -142,6 +149,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             median_left_idx = getLowerNeighborIdx(projections, n_points, median_right);
             median_left = projections[median_left_idx];
             median = (median_left + median_right) / 2;
+
             //compute and set center of the node
             double* center_l=(double*)malloc(n_dims*sizeof(double));
             double* center_r=(double*)malloc(n_dims*sizeof(double));
@@ -150,15 +158,14 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             orthogonal_projection(n_dims, pts[median_right_idx], pts[idx_fp[0]], pts[idx_fp[1]], center_r);
 
             for(int i=0; i<n_dims; i++)
-            {
                 foo->center[i] = (center_l[i] + center_r[i]) / 2;
-            }
+            
             free(center_l);
-            free(center_r);           
+            free(center_r);
+
             //place pts which projection is smaller than the median to left half of the array and greater to right half 
             compare_with_median(projections, pts, median, n_points, n_dims);
             center_idx = (n_points / 2);
-
         }
         else //odd n_pts -> median is the central value
         {

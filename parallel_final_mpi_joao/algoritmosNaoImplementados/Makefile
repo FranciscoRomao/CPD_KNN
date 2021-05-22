@@ -1,28 +1,20 @@
-MAIN = ballAlg.c
+MAIN = mpi_medians.c
 
 TARGET = ballAlg
-
-OBJS = 
 
 FLAGS = -O3 -fopenmp -lm
 debugFLAGS = -fopenmp -g -lm -Wall
 
 all: ballAlg
 
-$(TARGET): gen_points.o geometry.o unsorted_median.o quicksort.o
-	gcc $(MAIN)  $^ -o $@ $(debugFLAGS)
+$(TARGET): $(MAIN) gen_points.o psrs_mpi.o
+	mpicc $(debugFLAGS)  $^ -o $@ $(debugFLAGS)
 
 gen_points.o: gen_points.c
-	gcc $^ -c $(debugFLAGS)
+	mpicc $^ -c $(debugFLAGS)
 
-geometry.o: geometry.c
-	gcc $^ -c $(debugFLAGS)
-
-unsorted_median.o:unsorted_median.c
-	gcc $^ -c $(debugFLAGS)
-
-quicksort.o:quicksort.c
-	gcc $^ -c $(debugFLAGS)
+psrs_mpi.o: psrs_mpi.c
+	mpicc $^ -c $(debugFLAGS)
 
 # $^ - representa as dependencias do comando
 # $@ - representa o ficheiro de saida do comando

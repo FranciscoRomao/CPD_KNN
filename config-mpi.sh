@@ -1,1 +1,0 @@
-export OMPI_MCA_plm_rsh_args="-o UserKnownHostsFile=$CLUSTER_HOME/.ssh/known_hosts"

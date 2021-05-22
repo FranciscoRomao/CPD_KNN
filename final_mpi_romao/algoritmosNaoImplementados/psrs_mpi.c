@@ -18,19 +18,6 @@ int rank; //id of the current compute
 int n_procs; //number of porcessors/processors
 
 /**
- * Compare function used inside quicksort
- * @param   a   First number to compare
- * @param   b   Second number to compare
- * @return  Returns 1 if a>b, -1 if a<b and 0 if a=b  
- */
-int cmpfunc (const void * a, const void * b)
-{
-  if (*(double*)a > *(double*)b) return 1;
-  else if (*(double*)a < *(double*)b) return -1;
-  else return 0;
-}
-
-/**
  * Copies n_items from the source array to the destination array
  * @param   dest    Destination array
  * @param   sourc   Source array
@@ -39,9 +26,7 @@ int cmpfunc (const void * a, const void * b)
 void arraycpy(double* dest, double* sourc, int n_items)
 {
     for(int i=0; i<n_items; i++)
-    {
         dest[i] = sourc[i];
-    }
 }
 
 
@@ -74,10 +59,7 @@ double sorted_median(double *vector, int n_items)
         return vector[n_items/2];
     }
     else
-    {
-        //printf("Sorted: %lf | %lf\n", vector[n_items/2], vector[n_items/2 - 1]);
         return 0.5 * ((double)vector[n_items/2] + vector[n_items/2 - 1]);
-    }
 }
 
 
@@ -101,7 +83,6 @@ double buildSet(double *setL, double *setR, int* counterL, int* counterR, double
 
     for(int i=0; i<n_items; i++)
     {
-        //printArray(setL, *counterL);
         if(vector[i]<median)
         {
             (*counterL)++;
@@ -114,8 +95,6 @@ double buildSet(double *setL, double *setR, int* counterL, int* counterR, double
         }
     }
 
-    //printArray(setL, *counterL);
-    //printf("Sets criados: setL %d items, setR %d items, idx da mediana: %d\n\n", *counterL, *counterR, (*counterL));
     return (*counterL);
 }
 
@@ -134,39 +113,25 @@ double median(double *vector, int n_items)
     double result;
     int n_medians = 0;
     double *medians = (double *)malloc(n_items * sizeof(double));
-    
-    //printArray(vector, 6);
 
     for(i=0; i<full_splits; i++)
-    {
         medians[i] = sorted_median(vector + 5*i, 5);
-        // printf("Median do grupo %d: %lf\n", i, medians[i]);
-    }
 
     if(semi_splits != 0)
-    {
         medians[i] = sorted_median(vector + 5*full_splits, semi_splits);
-        // printf("Median do semi grupo %d: %lf\n", i, medians[i]);
-    }
 
     n_medians = full_splits + (semi_splits!=0 ? 1 : 0);
 
     if(n_medians <= 5)
     {
         result = sorted_median(medians, n_medians);
-        //printf("Mediana das medianas: %lf\n", result);
-        //result = buildSet(setL, setR, vector, n_items, result);
         free(medians);
-        //printf("Mediana das medianas: %lf\n", result);
+ 
         return result;
     }
 
     result = median(medians, full_splits + (semi_splits!=0 ? 1 : 0));
     free(medians);
-
-    //printf("Mediana das medianas: %lf\n", result);
-
-    //result = buildSet(setL, setR, vector, n_items, result);
 
     return result;
 }
@@ -196,9 +161,8 @@ int vectorSum(int* vector, int n)
     int count=0;
 
     for(int i=0; i<n; i++)
-    {
         count += vector[i];
-    }
+
     return count;
 }
 
@@ -239,6 +203,7 @@ double PSRS(double* vector, long n_items)
 
     double* finalVector = (double*)malloc(sizeof(double)*5*n_items); // Composition of the partitions belonging to the curr computer
     checkMalloc(finalVector, 2);
+    
     int elems_recvd=0; // # of elements in the finalVector
     
     MPI_Request* requests = (MPI_Request*)malloc(sizeof(MPI_Request)*n_procs); //To pass as parameter into a non-blocking send call
@@ -249,17 +214,18 @@ double PSRS(double* vector, long n_items)
     //int n_elem; // Number of elements of the partition being worked on 
     int* n_elem = (int*)malloc(sizeof(int)*n_procs);
     checkMalloc(n_elem, 5);
+    
     int n_to_recv; // Number of elements of the partition being received
     
     int i; //iteratorTempo
 
     double aux_limit; // saves the smallest/biggest value in the computer
 
-    //Se isto resolver apagar depois
     double finalMedians[2];
 
     double aux1_db;
     double aux2_db;
+    
     int* aux_vector = (int*)malloc(n_procs*2*sizeof(int));
     checkMalloc(aux_vector, 6);
     
@@ -284,8 +250,6 @@ double PSRS(double* vector, long n_items)
     //Each processor sends to root its samples
     MPI_Gather(&(sample[0]), n_sample, MPI_DOUBLE, &(recvValues[0]), n_sample, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    //printf("Rank %d chegou aqui\n", rank);
-    //fflush(stdout);
     #ifdef DEBUG_Lv1
         MPI_Barrier(MPI_COMM_WORLD);
         if(!rank)
@@ -366,9 +330,6 @@ double PSRS(double* vector, long n_items)
             MPI_Isend(&(n_elem[i]), 1, MPI_INT, i, 0, MPI_COMM_WORLD, &(requests[i]));
             if(n_elem[i])
                 MPI_Isend(&(partitions[i][0]), n_elem[i], MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &(requests[i]));
-            
-            //printf("Rank %d enviou ----- %d ao %d\n", rank, n_elem[i], i);
-            //fflush(stdout);
         }
     }
 
@@ -394,9 +355,6 @@ double PSRS(double* vector, long n_items)
         {
             MPI_Recv(&n_to_recv, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-            //printf("N:%d sent by %d received on %d\n", n_to_recv, i, rank);
-            //fflush(stdout);
-
             if(n_to_recv)
             {
                 MPI_Recv(&(partitions2recv[i][0]), n_to_recv , MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -408,13 +366,8 @@ double PSRS(double* vector, long n_items)
                         printArray(partitions2recv[i], n_to_recv);
                     #endif
                     fflush(stdout);
-                    //MPI_Barrier(MPI_COMM_WORLD);
                 #endif
             }
-            //O IGNORE_NUM pode ser descecessário, há argumentos a mais nesta função ---------------- REVER
-            //printf("Elements recevd: %d more to write %d, rank %d\n", elems_recvd, n_to_recv, rank);
-            //printf("finalvector size: %ld\n", 2*n_items);
-            //fflush(stdout);
 
             elems_recvd = appendArray(finalVector, elems_recvd, partitions2recv[i], n_to_recv, IGNORE_NUM);
         }
@@ -456,12 +409,6 @@ double PSRS(double* vector, long n_items)
         if(n_total%2 != 0)
         {
             median_idx1 = find_K_idx(aux_vector, n_total/2, n_total, &median_holder1);
-
-            #ifdef DEBUG_Lv1           
-                printf("Median1: %d\n", median_idx1);
-                printf("Holder1: %d\n", median_holder1);
-                fflush(stdout);
-            #endif
             
             // initializes vector which tells where the median is
             for(i = 0; i<n_procs*2; i++)
@@ -477,10 +424,6 @@ double PSRS(double* vector, long n_items)
         }
         else
         {
-            //printf("Procurar valores %d e %d nos procs\n", n_total/2, (n_total/2)-1);
-            //printf("%d %d %d %d\n", aux_vector[0], aux_vector[1], aux_vector[2], aux_vector[3]);
-            //fflush(stdout);
-
             median_idx1 = find_K_idx(aux_vector, n_total/2, n_total, &median_holder1);
             median_idx2 = find_K_idx(aux_vector, (n_total/2)-1, n_total, &median_holder2);
 
@@ -518,31 +461,14 @@ double PSRS(double* vector, long n_items)
 
     for(i=0; i<2; i++)
     {
-        if(aux_vector[i] != -1)//aux_limit é reutilizado
+        if(aux_vector[i] != -1)//aux_limit is reused
         {
-            //printf("#A tentar encontrar o k %d de um vetor de %ld elems\n", aux_vector[i], n_items);
-            //printArray(finalVector, n_items);
-            //fflush(stdout);
-            //find median value
-            //finalMedians[i] = getKsmallest(finalVector, aux_vector[i], n_items);
             finalMedians[i] = getKsmallest(finalVector, aux_vector[i], elems_recvd);
 
             //sends median value to root
             MPI_Isend(&(finalMedians[i]), 1, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD, &(requests[i]));
-            //printf("#Mediana enviado ao root por %d\n", rank);
-            //fflush(stdout);
         }
     }
-
-    #ifdef DEBUG_Lv2
-        printf("Chegou %d\n",rank); //Testa se algum procs ficou para trás
-        fflush(stdout);
-
-        MPI_Barrier(MPI_COMM_WORLD);
-
-        printf("Passou %d\n", rank);
-        fflush(stdout);
-    #endif
 
     if(!rank)
     {
@@ -568,81 +494,9 @@ double PSRS(double* vector, long n_items)
         }
     }
     
-    //Facilmente se faz um broadcast e todos retornam a mediana
     //Todos menos o rank 0 vão fazer return de 0. O rank 0 faz return da mediana.
+    //Facilmente se faz um broadcast e todos retornam a mediana
     return 0;
-}
-
-
-/**
- * Finds the index of the closer and lower element to result on the vector
- * @param   vector  Vector to find the element
- * @param   n_items Number of items of the array
- * @return  Index of the lower neightbor
- */
-long getLowerNeighborIdx(double* vector, long n_items, double result)
-{
-    long neighbor_idx;
-    double min_diff = -1;
-    double diff;
-    int flag = 0;
-
-    for (int i = 0; i < n_items; i++)
-    {
-        if (vector[i] > result)
-        {
-            continue;
-        } 
-        else if ((vector[i] < result))
-        {
-            diff = result-vector[i];
-            if ( diff < min_diff || min_diff == -1 )
-            {
-                min_diff = diff;
-                neighbor_idx = i;
-            }
-        }
-        else if (vector[i] == result)
-        {
-            if (flag == 0)
-            {
-                flag = 1;
-            }
-            else if (flag == 1)
-            {
-                neighbor_idx = i;
-                break;
-            }
-        }
-    }
-
-    return neighbor_idx;
-}
-
-void printArray(double* vector, int n_elem)
-{
-    for(int i=0; i<n_elem; i++)
-    {
-        printf("%lf ", vector[i]);
-    }
-    printf("\n");
-}
-
-/**
- * Searchs one value in an array and returns its idx
- * @param   projections    Array to search in
- * @param   n_points   number of points in the array 
- * @param   value   value to find
- * @return  Returns the index of value from the projection vector
- */
-long find_idx_from_value(double *projections, long n_points, double value)
-{
-    for(int i=0; i<n_points; i++)
-    {
-        if(projections[i] == value)
-            return i;
-    }
-    return -1;
 }
 
 double getKsmallest(double* vector, long k, long n_items)
@@ -698,17 +552,6 @@ double getKsmallest(double* vector, long k, long n_items)
     return result;
 }
 
-void linerize(double** matrix, int nx, int ny, double* vector)//x é o numero de vetores na matrix e y é o numero de elementos dentro do vetor
-{
-    for(int i=0; i<nx; i++)
-    {
-        for(int j=0; j<ny; j++)
-        {
-            vector[i*nx+j] = matrix[i][j];
-        }
-    }
-}
-
 double getIntervalSet(double *interval, double *vector, int n_items, double comparatorL, double comparatorR)
 {
     int counter=0;
@@ -757,6 +600,9 @@ void printArray(double* vector, int n_elem)
     printf("\n");
 }
 
+/**
+ * Sets n_elems starting from vector to to_set double value
+ */
 void memset_double(double* vector, double to_set, int n_elem)
 {
     for(int i=0; i<n_elem; i++)
@@ -765,7 +611,9 @@ void memset_double(double* vector, double to_set, int n_elem)
     }
 }
 
-//Retornar o indice do k dentro da partição com k
+/**
+ * Finds who has the median and what is the median index inside the holder's vector
+ */
 int find_K_idx(int *vector, int k, int n_elem, int* median_holder)
 {
     int counter = -1;

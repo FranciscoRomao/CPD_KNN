@@ -11,37 +11,6 @@
 
 int node_idx = 0;
 
-void flag (int x, char* name)
-{   
-    printf("%d %s\n", x, name);
-    fflush(stdout);
-}
-
-void print_proc_name(char * name){
-    printf("%s\n",name);
-    fflush(stdout);
-}
-
-void my_print(char* name, int x){
-    if(strcmp(name,"lab13p3")==0){
-        printf("%d\n",x);
-        fflush(stdout);
-    }
-}
-
-void print_pjs(double* pjs, long n_pts){
-    for(long i=0;i<n_pts;i++){
-        printf("%lf ",pjs[i]);
-    }
-}
-
-void print_pts(double** pts, long n_pts, int n_dims){
-    for(long i=0;i<n_pts;i++){
-        for(int j=0;j<n_dims;j++)
-            printf("%lf ",pts[i][j]);
-    }
-}
-
 /**
  * Prints recursively all the nodes
  * @param node_id : id of the node
@@ -50,7 +19,6 @@ void print_pts(double** pts, long n_pts, int n_dims){
  */
 void print_Node(node* foo, int n_dims)
 {   
-    //node_id left_child_id right_child_id radius center_coordinates
     if (foo->L != -1)
     {
         printf("%ld %ld %ld %.6lf", foo->id, foo->L, foo->R, foo->radius);
@@ -73,7 +41,7 @@ void print_Node(node* foo, int n_dims)
     return;
 }
 
-void print_nodes(node** vector, int n_dims, long n_nodes)
+void print_Nodes(node** vector, int n_dims, long n_nodes)
 {
     for(int i=0; i<n_nodes; i++)
     {
@@ -124,12 +92,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         center_idx = 1;
         rnode_id = node_id + 2 * center_idx;
         foo->R = rnode_id;
-        /*printf("After comm:\n");
-        printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
-        print_pts(pts,start_npoints,n_dims);printf("\n");
-        print_pjs(projections,start_npoints);printf("\n");*/
         double* aux;
-        //printf("node_id:%ld pts[0][0]:%lf pts[1][0]:%lf\n\n",node_id,pts[0][0],pts[1][0]);
         if (pts[0][0] > pts[1][0]) //sort ascending if not already
         {   
             aux = pts[0];
@@ -144,15 +107,12 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         }
         //both points are equidistant to the center
         foo->radius = distance(n_dims, pts[0], foo->center);
-        //printf("radius:%lf\n",foo->radius);
         
         //build leafs
         #ifdef PRINT_NODE
             if(rank==0)
                 node_dump[node_id] = foo;
         #endif
-
-        //free(foo->center);
 
         build_tree(lnode_id, pts, NULL, 1, n_dims,comm,rank,start_npoints,threads_available, node_dump); //center_idx happens to be the number of points in the set
         build_tree(rnode_id,pts+1, NULL, 1, n_dims,comm,rank,start_npoints,threads_available, node_dump);
@@ -226,7 +186,6 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             if(rank==0)
                 node_dump[node_id] = foo;
         #endif
-        //free(foo->center);
     }
 
     int size_world;
@@ -234,53 +193,28 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
     
     if(size_world>=2)
     {
-        /*if(rank==0){
-        printf("Before comm:\n");
-        printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
-        print_pts(pts,n_points,n_dims);printf("\n");
-        print_pjs(projections,n_points);printf("\n");}
-        else{
-            printf("After comm:\n");
-            printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
-            print_pts(pts,n_points,n_dims);printf("\n");
-            print_pjs(projections,n_points);printf("\n");
-        }*/
-
         MPI_Comm above_comm;
         MPI_Comm below_comm;
         //MPI_Comm new_comm;
 
         int above_median=(((double)rank/size_world)>=0.5)?1:0;
-        //printf("above median:%d rank:%d\n",above_median,rank);
         int new_rank;
         if(above_median)
         {
             MPI_Comm_split(comm, 0, 0, &below_comm);
-            //MPI_Comm_split(comm, 0, 0, &new_comm);
             MPI_Comm_rank(below_comm, &new_rank);
-            //printf("NEW_RANK: %d above\n", new_rank);
-            //envia HEAD vazia-------------
             build_tree(lnode_id, pts, projections, center_idx, n_dims, below_comm, new_rank, start_npoints, threads_available, node_dump); //center_idx happens to be the number of points in the set
         }
         else
         {
-            //printf("splitting below!\n");
             MPI_Comm_split(comm, 1, 0, &above_comm);
             MPI_Comm_rank(above_comm, &new_rank);
-            //printf("NEW_RANK: %d below\n", new_rank);
             build_tree(rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, above_comm, 
                        new_rank, start_npoints, threads_available, node_dump);
         }
     }
     else
     {
-        /*printf("Before comm:\n");
-        printf("r:%ld l:%ld c:%ld n:%ld\n",rnode_id,lnode_id,center_idx,n_points);
-        print_pts(pts,n_points,n_dims);printf("\n");
-        print_pjs(projections,n_points);printf("\n");
-        build_tree(lnode_id,pts, projections, center_idx, n_dims,comm,rank,start_npoints,threads_available); //center_idx happens to be the number of points in the set
-        build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,comm,rank,start_npoints,threads_available);
-        */
         if(threads_available == -1) //number of threads available is always one
         {
             build_tree(lnode_id,pts, projections, center_idx, n_dims,comm,rank,start_npoints,threads_available, node_dump); //center_idx happens to be the number of points in the set
@@ -376,10 +310,6 @@ int main(int argc, char *argv[])
     MPI_Comm comm = MPI_COMM_WORLD;
     int threads_available = omp_get_max_threads();
     
-    //printf("threads - %d\n", threads_available);
-    //fflush(stdout);
-    //exit(0);
-     
     build_tree(0, pts, projections, n_points, n_dims, comm ,rank, n_points, threads_available, node_dump);
 
     //____________END_TIME_BENCHMARK_____________
@@ -388,13 +318,13 @@ int main(int argc, char *argv[])
     endtime = MPI_Wtime();
     exec_time += omp_get_wtime();
 
-    print_nodes(node_dump, n_dims, n_nodes);
+    print_Nodes(node_dump, n_dims, n_nodes);
     free(node_dump);
 
     if(rank==0)
     {
-        //fprintf(stderr, "%.1lf\n", exec_time);
-        fprintf(stderr, "That took %.1lf seconds\n", endtime-starttime);
+        fprintf(stderr, "%.1lf\n", exec_time);
+        //fprintf(stderr, " %.1lf seconds\n", endtime-starttime);
     }
     
     free(projections);

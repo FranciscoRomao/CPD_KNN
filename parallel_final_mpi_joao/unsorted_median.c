@@ -4,7 +4,6 @@
 #include <time.h>
 #include <float.h>
 #include "unsorted_median.h"
-#include "quicksort.h"
 #include <omp.h>
 
 /**
@@ -57,12 +56,7 @@ double sorted_median(double *vector, int n_items)
         return result;
     }
 
-    if(0){
-        quick_sort_parallel(vector, n_items, 100000);
-    }
-    else{
-        qsort(vector, n_items, sizeof(double), cmpfunc);
-    }
+    qsort(vector, n_items, sizeof(double), cmpfunc);
 
     if(n_items % 2 != 0)
     {

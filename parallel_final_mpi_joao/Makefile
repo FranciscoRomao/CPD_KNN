@@ -9,7 +9,7 @@ debugFLAGS = -fopenmp -g -lm -Wall
 
 all: ballAlg
 
-$(TARGET): gen_points.o geometry.o unsorted_median.o quicksort.o
+$(TARGET): gen_points.o geometry.o unsorted_median.o
 	mpicc $(MAIN)  $^ -o $@ $(debugFLAGS)
 
 gen_points.o: gen_points.c
@@ -19,9 +19,6 @@ geometry.o: geometry.c
 	mpicc $^ -c $(debugFLAGS)
 
 unsorted_median.o:unsorted_median.c
-	mpicc $^ -c $(debugFLAGS)
-
-quicksort.o:quicksort.c
 	mpicc $^ -c $(debugFLAGS)
 
 # $^ - representa as dependencias do comando

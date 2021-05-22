@@ -7,7 +7,7 @@
 #include "unsorted_median.h"
 #include <string.h>
 
-#define PRINT_NODE
+//#define PRINT_NODE
 
 int node_idx = 0;
 
@@ -64,7 +64,7 @@ void print_Nodes(node** vector, int n_dims, long n_nodes)
     return;
 }
 
-void build_tree(long node_id, double **pts, double* projections, long n_points, int n_dims, MPI_Comm comm, int rank, long start_npoints, int threads_available, node** node_dump)
+void build_tree(long node_id, double **pts, double* projections, long n_points, int n_dims, MPI_Comm comm, int rank, long start_npoints, node** node_dump)
 {   
     long lnode_id;
     long rnode_id;
@@ -121,8 +121,8 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
                 node_dump[node_id] = foo;
         #endif
 
-        build_tree(lnode_id, pts, NULL, 1, n_dims,comm,rank,start_npoints,threads_available, node_dump); //center_idx happens to be the number of points in the set
-        build_tree(rnode_id,pts+1, NULL, 1, n_dims,comm,rank,start_npoints,threads_available, node_dump);
+        build_tree(lnode_id, pts, NULL, 1, n_dims,comm,rank,start_npoints, node_dump); //center_idx happens to be the number of points in the set
+        build_tree(rnode_id,pts+1, NULL, 1, n_dims,comm,rank,start_npoints, node_dump);
         return;
     }
     else // > 2 points in the set
@@ -132,9 +132,9 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         long idx_fp[2] = {0, 0}; // indices of the points furthest apart
         
         //compute furthest apart points in the current set
-        furthest_apart(n_dims, n_points, pts, idx_fp, threads_available);
+        furthest_apart(n_dims, n_points, pts, idx_fp);
         //pseudo-projection of all points (enough to know relative positions)
-        project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points, threads_available);
+        project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
 
         if(n_points % 2 == 0) //even n_pts -> median is the avergae of 2 central values
         {
@@ -183,7 +183,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         }
 
         // finds the most distant to center, the distance between thems is the radius
-        fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, foo->center, threads_available);
+        fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, foo->center);
     	foo->radius = distance(n_dims, pts[fapart_idx], foo->center);	
 
         rnode_id = node_id + 2 * center_idx;
@@ -210,68 +210,20 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         {
             MPI_Comm_split(comm, 0, 0, &below_comm);
             MPI_Comm_rank(below_comm, &new_rank);
-            build_tree(lnode_id, pts, projections, center_idx, n_dims, below_comm, new_rank, start_npoints, threads_available, node_dump); //center_idx happens to be the number of points in the set
+            build_tree(lnode_id, pts, projections, center_idx, n_dims, below_comm, new_rank, start_npoints, node_dump); //center_idx happens to be the number of points in the set
         }
         else
         {
             MPI_Comm_split(comm, 1, 0, &above_comm);
             MPI_Comm_rank(above_comm, &new_rank);
             build_tree(rnode_id, pts + center_idx, projections + center_idx, n_points - center_idx, n_dims, above_comm, 
-                       new_rank, start_npoints, threads_available, node_dump);
+                       new_rank, start_npoints, node_dump);
         }
     }
     else
     {
-        if(threads_available == -1) //number of threads available is always one
-        {
-            build_tree(lnode_id,pts, projections, center_idx, n_dims,comm,rank,start_npoints,threads_available, node_dump); //center_idx happens to be the number of points in the set
-            build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,comm,rank,start_npoints,threads_available, node_dump);
-        }
-        else if (threads_available == 1) //number of threads available in this recursion is down to one
-        {
-            build_tree(lnode_id,pts, projections, center_idx, n_dims,comm,rank,start_npoints,threads_available, node_dump); //center_idx happens to be the number of points in the set
-            build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,comm,rank,start_npoints,threads_available, node_dump);
-        }
-        else if (node_idx != 0 && threads_available > 1)//still threads left to put to work
-        {   
-                #pragma omp task
-                {
-                    threads_available = threads_available/2;
-                    omp_set_nested(2);
-                    omp_set_num_threads(threads_available);
-                    build_tree(lnode_id,pts, projections, center_idx, n_dims,comm,rank,start_npoints,threads_available, node_dump); //center_idx happens to be the number of points in the set
-                }
-                #pragma omp task
-                {
-                    threads_available = threads_available/2;
-                    omp_set_nested(2);
-                    omp_set_num_threads(threads_available);
-                    build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,comm,rank,start_npoints,threads_available, node_dump);
-                }
-        }
-        else if (node_idx == 0 && threads_available != -1)//multiple threads available and root node -> start parallel in the building of the tree
-        {   
-            node_idx = 1;
-            #pragma omp parallel
-            {
-                #pragma omp single
-                {
-                    threads_available = threads_available/2;
-                    #pragma omp task
-                    {
-                        omp_set_nested(2);
-                        omp_set_num_threads(threads_available);
-                        build_tree(lnode_id,pts, projections, center_idx, n_dims,comm,rank,start_npoints,threads_available, node_dump); //center_idx happens to be the number of points in the set
-                    }
-                    #pragma omp task
-                    {
-                        omp_set_nested(2);
-                        omp_set_num_threads(threads_available);
-                        build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,comm,rank,start_npoints,threads_available, node_dump);
-                    }
-                }
-            }
-        }
+        build_tree(lnode_id,pts, projections, center_idx, n_dims,comm,rank,start_npoints, node_dump); //center_idx happens to be the number of points in the set
+        build_tree(rnode_id,pts + center_idx, projections + center_idx, n_points - center_idx, n_dims,comm,rank,start_npoints, node_dump);
     }
     return;
 }
@@ -283,8 +235,7 @@ int main(int argc, char *argv[])
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); /*DETERMINE RANK OF THIS PROCESSOR*/
     MPI_Comm_size(MPI_COMM_WORLD, &size); /*DETERMINE TOTAL NUMBER OF PROCESSORS*/
-    
-    double exec_time;
+
     double starttime, endtime;
     double **pts;
     int n_dims = atoi(argv[1]); //number of dimensions
@@ -299,7 +250,6 @@ int main(int argc, char *argv[])
     }
 
     //____________START_TIME_BENCHMARK_____________ 
-    exec_time = -omp_get_wtime();
     starttime = MPI_Wtime();
 
     //generates dataset
@@ -315,24 +265,19 @@ int main(int argc, char *argv[])
     #endif
     
     MPI_Comm comm = MPI_COMM_WORLD;
-    int threads_available = omp_get_max_threads();
     
-    build_tree(0, pts, projections, n_points, n_dims, comm ,rank, n_points, threads_available, node_dump);
+    build_tree(0, pts, projections, n_points, n_dims, comm ,rank, n_points, node_dump);
 
     //____________END_TIME_BENCHMARK_____________
     MPI_Barrier(MPI_COMM_WORLD);
 
     endtime = MPI_Wtime();
-    exec_time += omp_get_wtime();
 
     print_Nodes(node_dump, n_dims, n_nodes);
     free(node_dump);
 
     if(rank==0)
-    {
-        fprintf(stderr, "%.1lf\n", exec_time);
-        //fprintf(stderr, " %.1lf seconds\n", endtime-starttime);
-    }
+        fprintf(stderr, " %.1lf seconds\n", endtime-starttime);
     
     free(projections);
     free(pts_first_position);

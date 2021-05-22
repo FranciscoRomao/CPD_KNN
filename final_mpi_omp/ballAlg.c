@@ -7,7 +7,7 @@
 #include "unsorted_median.h"
 #include <string.h>
 
-#define PRINT_NODE
+//#define PRINT_NODE
 
 int node_idx = 0;
 

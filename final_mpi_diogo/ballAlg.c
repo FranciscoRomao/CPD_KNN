@@ -64,12 +64,14 @@ void print_Nodes(node** vector, int n_dims, long n_nodes)
     return;
 }
 
+
 void build_tree(long node_id, double **pts, double* projections, long n_points, int n_dims, MPI_Comm comm, int rank, long start_npoints, node** node_dump)
 {   
     long lnode_id;
     long rnode_id;
     long center_idx; //indice of the center of the pts array where the split for the childs is made
     long int fapart_idx = 0;
+    int size_world;
 
     node* foo = (node*)malloc(sizeof(node));
 
@@ -123,13 +125,14 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             return;
         }
         else // > 2 points in the set
-        {
+        {   
+            MPI_Comm_size(comm, &size_world);
             long median_idx; //indice of the median
             double median; //value of the median
             long idx_fp[2] = {0, 0}; // indices of the points furthest apart
             
             //compute furthest apart points in the current set
-            furthest_apart(n_dims, n_points, pts, idx_fp);
+            furthest_apart(n_dims, n_points, pts, idx_fp, size_world, comm , rank);
             //pseudo-projection of all points (enough to know relative positions)
             project_pts2line(n_dims, projections, pts[idx_fp[0]], pts[idx_fp[1]], pts, n_points);
 
@@ -180,7 +183,7 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             }
 
             // finds the most distant to center, the distance between thems is the radius
-            fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, foo->center);
+            fapart_idx = furthest_point_from_coords(n_dims, n_points, pts, foo->center, size_world, comm, rank);
             foo->radius = distance(n_dims, pts[fapart_idx], foo->center);	
 
             rnode_id = node_id + 2 * center_idx;
@@ -189,10 +192,12 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
             node_dump[node_id] = foo;
         }
     }
-
-    int size_world;
-    MPI_Comm_size(comm, &size_world);
-    
+    else
+    {   
+        MPI_Comm_size(comm, &size_world);
+        double* max_finder_aux=(double*)malloc(n_dims*sizeof(double));
+        long idx_aux = furthest_point_from_coords(n_dims, n_points, pts, max_finder_aux, size_world, comm, rank);
+    }
     if(size_world>=2)
     {
         MPI_Comm above_comm;
@@ -248,20 +253,32 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
     return;
 }
 
+
 int main(int argc, char *argv[])
 {   
     MPI_Init(&argc, &argv); //START MPI
+    int n_dims = atoi(argv[1]); //number of dimensions
+    long n_points = atoi(argv[2]); //number of points in the set
     int rank, size;
+
+    
+    //DECLARE THE MPI DATATYPE AND OPERATION FOR REDUCTION WITH MAX AND ITS INDEX
+    const int nitems=2;
+    int blocklengths[2] = {1,1};
+    MPI_Datatype types[2] = {MPI_DOUBLE, MPI_LONG};
+    MPI_Aint offsets[2];
+    offsets[0] = offsetof(max_n_idx, maximum);
+    offsets[1] = offsetof(max_n_idx, index);
+    MPI_Type_create_struct(nitems, blocklengths, offsets, types, &MAXNIDX);
+    MPI_Type_commit(&MAXNIDX);
+    MPI_Op_create((MPI_User_function*) reducemaxop, 1, &REDUCEMAXOP);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); /*DETERMINE RANK OF THIS PROCESSOR*/
     MPI_Comm_size(MPI_COMM_WORLD, &size); /*DETERMINE TOTAL NUMBER OF PROCESSORS*/
 
     double starttime, endtime;
     double **pts;
-    int n_dims = atoi(argv[1]); //number of dimensions
-    long n_points = atoi(argv[2]); //number of points in the set
     long n_nodes = 2 * n_points - 1; //number of nodes in the tree
-
     node** node_dump = (node**)malloc(n_nodes*sizeof(node*));
 
     for(int i=0; i<n_nodes;i++)

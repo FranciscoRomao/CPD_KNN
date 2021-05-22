@@ -2,19 +2,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "geometry.h"
-#include <mpi.h>
-
-typedef struct max_n_idx
-{
-    double maximum;
-    long int index; 
-}max_n_idx;
-
-max_n_idx max_n_idx_max(max_n_idx a, max_n_idx b)
-{
-    return a.maximum > b.maximum ? a : b; 
-}
-
 
 /**
 * Computes euclidean distance
@@ -62,20 +49,39 @@ double squared_distance(int n_dims, double *a, double *b)
  * @param   pts                 **pts set of the points
  * @param   base_coords         of the point to search from
  */
-long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords)
+long furthest_point_from_coords(int n_dims, long n_points, double **pts, double *base_coords, int size_world, MPI_Comm comm ,int rank)
 {
     double curr_dist = 0;
     max_n_idx max_point={-1.0,-1};
-    
-    for (long i = 0; i < n_points; i++)
-    {   
-        if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)
+    max_n_idx final_reduce_result = {-1.0,-1};
+    if(size_world>1)//distribute work
+    {
+        MPI_Bcast(base_coords,n_dims,MPI_DOUBLE,0,comm);
+        long start_idx = (long) floor(rank * (double)n_points/size_world);
+        long end_idx =  (long) floor((rank+1) * (double)n_points/size_world);
+        for(long i = start_idx; i<end_idx;i++)
         {
-            max_point.maximum = curr_dist;
-            max_point.index = i;
+            if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)
+            {
+                max_point.maximum = curr_dist;
+                max_point.index = i;
+            }
         }
+        MPI_Reduce(&max_point,&final_reduce_result,1,MAXNIDX,REDUCEMAXOP,0,comm);
+        return final_reduce_result.index;
     }
-    return max_point.index;
+    else
+    {
+        for (long i = 0; i < n_points; i++)
+        {   
+            if ((curr_dist = squared_distance(n_dims, base_coords, pts[i])) > max_point.maximum)
+            {
+                max_point.maximum = curr_dist;
+                max_point.index = i;
+            }
+        }
+        return max_point.index;
+    }
 }
 
 
@@ -87,10 +93,10 @@ long furthest_point_from_coords(int n_dims, long n_points, double **pts, double 
  * @param **pts array with the points
  * @param *idx_fp 
  */
-void furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp)
+void furthest_apart(int n_dims, long n_points, double **pts, long *idx_fp, int size_world, MPI_Comm comm ,int rank)
 {
-    idx_fp[0] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
-    idx_fp[1] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]]);
+    idx_fp[0] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]], size_world, comm ,rank);
+    idx_fp[1] = furthest_point_from_coords(n_dims, n_points, pts, pts[idx_fp[0]], size_world, comm ,rank);
 
     return;
 }

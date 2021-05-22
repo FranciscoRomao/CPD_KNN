@@ -1,4 +1,4 @@
-MAIN = ballAlg.c
+MAIN = ballAlg-hybrid.c
 
 TARGET = ballAlg
 

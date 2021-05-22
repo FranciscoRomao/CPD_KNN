@@ -1,4 +1,4 @@
-MAIN = ballAlg.c
+MAIN = ballAlg-mpi.c
 
 TARGET = ballAlg
 

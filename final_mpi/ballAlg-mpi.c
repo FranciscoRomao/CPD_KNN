@@ -7,7 +7,7 @@
 #include "unsorted_median.h"
 #include <string.h>
 
-//#define PRINT_NODE
+#define PRINT_NODE
 
 int node_idx = 0;
 
@@ -53,7 +53,9 @@ void print_Nodes(node** vector, int n_dims, long n_nodes)
     {
         if(vector[i] != NULL)
         {
-            print_Node(vector[i], n_dims);
+            #ifdef PRINT_NODE
+                print_Node(vector[i], n_dims);
+            #endif
 
             if(vector[i]->L != -1)
                 free(vector[i]->center);
@@ -81,10 +83,9 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         foo->L = -1;
         foo->radius = 0;
         foo->center = pts[0];
-        #ifdef PRINT_NODE
-            if(rank==0)
-                node_dump[node_id] = foo;
-        #endif
+        if(rank==0)
+            node_dump[node_id] = foo;
+       
         return;
     }
 
@@ -116,10 +117,8 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         foo->radius = distance(n_dims, pts[0], foo->center);
         
         //build leafs
-        #ifdef PRINT_NODE
             if(rank==0)
                 node_dump[node_id] = foo;
-        #endif
 
         build_tree(lnode_id, pts, NULL, 1, n_dims,comm,rank,start_npoints, node_dump); //center_idx happens to be the number of points in the set
         build_tree(rnode_id,pts+1, NULL, 1, n_dims,comm,rank,start_npoints, node_dump);
@@ -189,10 +188,8 @@ void build_tree(long node_id, double **pts, double* projections, long n_points, 
         rnode_id = node_id + 2 * center_idx;
         foo->R = rnode_id;
         
-        #ifdef PRINT_NODE
             if(rank==0)
                 node_dump[node_id] = foo;
-        #endif
     }
 
     int size_world;

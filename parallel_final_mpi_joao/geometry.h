@@ -2,13 +2,13 @@
 #define _DISTANCE_H_
 
 typedef struct node {
-    //int n_nodes;
+    int n_nodes;
     double radius;
     double* center;
     long L;
     long R;
     long id;
-    //node* nextNode;
+    struct node* nextNode;
 } node;
 
 double distance(int n_dims, double *a, double *b);

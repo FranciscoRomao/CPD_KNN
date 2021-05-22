@@ -132,7 +132,7 @@ double median(double *vector, int n_items)
     double *medians = (double *)malloc(n_items/2 * sizeof(double));
     
     //printArray(vector, 17);
-    #pragma (0)//omp parallel for if(n_items>1000)
+    //#pragma (0)//omp parallel for if(n_items>1000)
     for(int i=0; i<full_splits; i++)
     {
         medians[i] = sorted_median(vector + 5*i, 5);
